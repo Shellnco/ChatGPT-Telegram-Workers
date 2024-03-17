@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 import {Context} from './context.js';
-import {CONST, DATABASE, ENV} from './env.js';
-import {requestImageFromOpenAI} from './openai.js';
+import {CONST, CUSTOM_COMMAND, DATABASE, ENV} from './env.js';
 import {mergeConfig} from './utils.js';
 import {
   getChatRoleWithContext,
@@ -9,7 +8,7 @@ import {
   sendMessageToTelegramWithContext,
   sendPhotoToTelegramWithContext,
 } from './telegram.js';
-import {chatWithLLM} from './chat.js';
+import {chatWithLLM, loadImageGen} from './llm.js';
 
 
 const commandAuthCheck = {
@@ -33,11 +32,9 @@ const commandAuthCheck = {
 
 
 const commandSortList = [
-  '/start',
   '/new',
   '/redo',
   '/img',
-  '/bill',
   '/role',
   '/setenv',
   '/delenv',
@@ -78,9 +75,19 @@ const commandHandlers = {
     fn: commandUpdateUserConfig,
     needAuth: commandAuthCheck.shareModeGroup,
   },
+  '/setenvs': {
+    scopes: [],
+    fn: commandUpdateUserConfigs,
+    needAuth: commandAuthCheck.shareModeGroup,
+  },
   '/delenv': {
     scopes: [],
     fn: commandDeleteUserConfig,
+    needAuth: commandAuthCheck.shareModeGroup,
+  },
+  '/clearenv': {
+    scopes: [],
+    fn: commandClearUserConfig,
     needAuth: commandAuthCheck.shareModeGroup,
   },
   '/usage': {
@@ -169,7 +176,7 @@ async function commandUpdateRole(message, command, subcommand, context) {
     };
   }
   try {
-    mergeConfig(context.USER_DEFINE.ROLE[role], key, value, null);
+    mergeConfig(context.USER_DEFINE.ROLE[role], key, value);
     await DATABASE.put(
         context.SHARE_CONTEXT.configStoreKey,
         JSON.stringify(Object.assign(context.USER_CONFIG, {USER_DEFINE: context.USER_DEFINE})),
@@ -195,12 +202,12 @@ async function commandGenerateImg(message, command, subcommand, context) {
   }
   try {
     setTimeout(() => sendChatActionToTelegramWithContext(context)('upload_photo').catch(console.error), 0);
-    const imgUrl = await requestImageFromOpenAI(subcommand, context);
-    try {
-      return sendPhotoToTelegramWithContext(context)(imgUrl);
-    } catch (e) {
-      return sendMessageToTelegramWithContext(context)(`${imgUrl}`);
+    const gen = loadImageGen(context);
+    if (!gen) {
+      return sendMessageToTelegramWithContext(context)(`ERROR: Image generator not found`);
     }
+    const img = await gen(subcommand, context);
+    return sendPhotoToTelegramWithContext(context)(img);
   } catch (e) {
     return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
   }
@@ -271,10 +278,47 @@ async function commandUpdateUserConfig(message, command, subcommand, context) {
   }
   const key = subcommand.slice(0, kv);
   const value = subcommand.slice(kv + 1);
+  if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
+    const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${key} is locked`));
+    return sendMessageToTelegramWithContext(context)(msg);
+  }
   try {
-    mergeConfig(context.USER_CONFIG, key, value, {
-      OPENAI_API_KEY: 'string',
-    });
+    context.USER_CONFIG.DEFINE_KEYS.push(key);
+    context.USER_CONFIG.DEFINE_KEYS = Array.from(new Set(context.USER_CONFIG.DEFINE_KEYS));
+    mergeConfig(context.USER_CONFIG, key, value);
+    await DATABASE.put(
+        context.SHARE_CONTEXT.configStoreKey,
+        JSON.stringify(context.USER_CONFIG),
+    );
+    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_error(e));
+  }
+}
+
+/**
+ * /setenvs 批量用户配置修改
+ *
+ * @param {TelegramMessage} message
+ * @param {string} command
+ * @param {string} subcommand
+ * @param {Context} context
+ * @return {Promise<Response>}
+ */
+async function commandUpdateUserConfigs(message, command, subcommand, context) {
+  try {
+    const values = JSON.parse(subcommand);
+    for (const ent of Object.entries(values)) {
+      const [key, value] = ent;
+      if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
+        const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${key} is locked`));
+        return sendMessageToTelegramWithContext(context)(msg);
+      }
+      context.USER_CONFIG.DEFINE_KEYS.push(key);
+      mergeConfig(context.USER_CONFIG, key, value);
+      console.log(JSON.stringify(context.USER_CONFIG));
+    }
+    context.USER_CONFIG.DEFINE_KEYS = Array.from(new Set(context.USER_CONFIG.DEFINE_KEYS));
     await DATABASE.put(
         context.SHARE_CONTEXT.configStoreKey,
         JSON.stringify(context.USER_CONFIG),
@@ -295,11 +339,44 @@ async function commandUpdateUserConfig(message, command, subcommand, context) {
  * @return {Promise<Response>}
  */
 async function commandDeleteUserConfig(message, command, subcommand, context) {
+  if (ENV.LOCK_USER_CONFIG_KEYS.includes(subcommand)) {
+    const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${subcommand} is locked`));
+    return sendMessageToTelegramWithContext(context)(msg);
+  }
   try {
     context.USER_CONFIG[subcommand] = null;
+    context.USER_CONFIG.DEFINE_KEYS = context.USER_CONFIG.DEFINE_KEYS.filter((key) => key !== subcommand);
     await DATABASE.put(
         context.SHARE_CONTEXT.configStoreKey,
         JSON.stringify(context.USER_CONFIG),
+    );
+    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_error(e));
+  }
+}
+
+
+/**
+ * /clearenv 清空用户配置
+ *
+ * @param {TelegramMessage} message
+ * @param {string} command
+ * @param {string} subcommand
+ * @param {Context} context
+ * @return {Promise<Response>}
+ */
+async function commandClearUserConfig(message, command, subcommand, context) {
+  if (ENV.LOCK_USER_CONFIG_KEYS.includes(subcommand)) {
+    const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${subcommand} is locked`));
+    return sendMessageToTelegramWithContext(context)(msg);
+  }
+  try {
+    context.USER_CONFIG.DEFINE_KEYS = [];
+    context.USER_CONFIG[subcommand] = null;
+    await DATABASE.put(
+        context.SHARE_CONTEXT.configStoreKey,
+        JSON.stringify({}),
     );
     return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
   } catch (e) {
@@ -396,18 +473,21 @@ async function commandUsage(message, command, subcommand, context) {
  * @return {Promise<Response>}
  */
 async function commandSystem(message, command, subcommand, context) {
-  let msg = 'Current System Info:\n';
-  msg+='OpenAI Model:'+ENV.CHAT_MODEL+'\n';
+  let msg = 'ENV.CHAT_MODEL: '+ENV.CHAT_MODEL+'\n';
   if (ENV.DEV_MODE) {
     const shareCtx = {...context.SHARE_CONTEXT};
     shareCtx.currentBotToken = '******';
     context.USER_CONFIG.OPENAI_API_KEY = '******';
+    context.USER_CONFIG.AZURE_API_KEY = '******';
+    context.USER_CONFIG.AZURE_COMPLETIONS_API = '******';
+    context.USER_CONFIG.AZURE_DALLE_API = '******';
+    context.USER_CONFIG.GOOGLE_API_KEY = '******';
+    context.USER_CONFIG.MISTRAL_API_KEY = '******';
 
-    msg += '<pre>';
-    msg += `USER_CONFIG: \n${JSON.stringify(context.USER_CONFIG, null, 2)}\n`;
-    msg += `CHAT_CONTEXT: \n${JSON.stringify(context.CURRENT_CHAT_CONTEXT, null, 2)}\n`;
-    msg += `SHARE_CONTEXT: \n${JSON.stringify(shareCtx, null, 2)}\n`;
-
+    msg = '<pre>\n' + msg;
+    msg += `USER_CONFIG: ${JSON.stringify(context.USER_CONFIG, null, 2)}\n`;
+    msg += `CHAT_CONTEXT: ${JSON.stringify(context.CURRENT_CHAT_CONTEXT, null, 2)}\n`;
+    msg += `SHARE_CONTEXT: ${JSON.stringify(shareCtx, null, 2)}\n`;
     msg+='</pre>';
   }
   context.CURRENT_CHAT_CONTEXT.parse_mode = 'HTML';
@@ -476,6 +556,9 @@ export async function handleCommandMessage(message, context) {
       needAuth: commandAuthCheck.default,
     };
   }
+  if (CUSTOM_COMMAND[message.text]) {
+    message.text = CUSTOM_COMMAND[message.text];
+  }
   for (const key in commandHandlers) {
     if (message.text === key || message.text.startsWith(key + ' ')) {
       const command = commandHandlers[key];
@@ -520,7 +603,11 @@ export async function bindCommandForTelegram(token) {
     all_group_chats: [],
     all_chat_administrators: [],
   };
-  for (const key of commandSortList) {
+  const commands = commandSortList;
+  if (!ENV.ENABLE_USAGE_STATISTICS) {
+    commands.splice(commands.indexOf('/usage'), 1);
+  }
+  for (const key of commands) {
     if (ENV.HIDE_COMMAND_BUTTONS.includes(key)) {
       continue;
     }

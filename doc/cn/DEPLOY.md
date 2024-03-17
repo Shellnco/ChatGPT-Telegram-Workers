@@ -1,7 +1,5 @@
 # 部署流程
 
-[English Version](./en/DEPLOY_EN.md)
-
 ## 视频教程
 
 <a href="https://youtu.be/BvxrZ3WMrLE"><img style="max-width: 600px;" alt="image" src="https://user-images.githubusercontent.com/9513891/223895059-1ffa48c7-8801-4d7b-b9d3-15c857d03225.png"></a>
@@ -36,7 +34,7 @@
 
 1. 打开 [Cloudflare Workers](https://dash.cloudflare.com/?to=/:account/workers) 注册账号
 2. 点击右上角的 `Create a Service`
-3. 进入新建的workers, 选择`Quick Edit`, 将[`../dist/index.js`](../dist/index.js)代码复制到编辑器中,保存
+3. 进入新建的workers, 选择`Quick Edit`, 将[`../dist/index.js`](../../dist/index.js)代码复制到编辑器中,保存
 
 
 ### 四. 配置环境变量

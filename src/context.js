@@ -2,21 +2,86 @@ import {CONST, DATABASE, ENV} from './env.js';
 // eslint-disable-next-line no-unused-vars
 import './type.js';
 
+
+/**
+ * @param {object} target - The target object.
+ * @param {object} source - The source object.
+ * @param {Array<string>} keys - The keys to merge.
+ */
+function mergeObject(target, source, keys) {
+  for (const key of Object.keys(target)) {
+    if (source[key]) {
+      if (keys !== null && !keys.includes(key)) {
+        continue;
+      }
+      if (typeof source[key] === typeof target[key]) {
+        target[key] = source[key];
+      }
+    }
+  }
+}
+
 /**
  * 上下文信息
  */
 export class Context {
   // 用户配置
   USER_CONFIG = {
-    // 系统初始化消息
-    SYSTEM_INIT_MESSAGE: ENV.SYSTEM_INIT_MESSAGE,
+    // 自定义的配置的Key
+    DEFINE_KEYS: [],
+
+    // AI提供商
+    AI_PROVIDER: ENV.AI_PROVIDER,
+
+    // 聊天模型
+    CHAT_MODEL: ENV.CHAT_MODEL,
+    // OenAI API Key
+    OPENAI_API_KEY: '',
     // OpenAI API 额外参数
     OPENAI_API_EXTRA_PARAMS: {},
-    // OenAI API Key
-    OPENAI_API_KEY: null,
+    // 系统初始化消息
+    SYSTEM_INIT_MESSAGE: ENV.SYSTEM_INIT_MESSAGE,
+
+    // DALL-E的模型名称
+    DALL_E_MODEL: ENV.DALL_E_MODEL,
+    // DALL-E图片尺寸
+    DALL_E_IMAGE_SIZE: ENV.DALL_E_IMAGE_SIZE,
+    // DALL-E图片质量
+    DALL_E_IMAGE_QUALITY: ENV.DALL_E_IMAGE_QUALITY,
+    // DALL-E图片风格
+    DALL_E_IMAGE_STYLE: ENV.DALL_E_IMAGE_STYLE,
+
+    // Azure API Key
+    AZURE_API_KEY: ENV.AZURE_API_KEY,
+    // Azure Completions API
+    AZURE_COMPLETIONS_API: ENV.AZURE_COMPLETIONS_API,
+    // Azure DALL-E API
+    AZURE_DALLE_API: ENV.AZURE_DALLE_API,
+
+    // WorkersAI聊天记录模型
+    WORKERS_CHAT_MODEL: ENV.WORKERS_CHAT_MODEL,
+    // WorkersAI图片模型
+    WORKER_IMAGE_MODEL: ENV.WORKERS_IMAGE_MODEL,
+
+
+    // Google Gemini API Key
+    GOOGLE_API_KEY: ENV.GOOGLE_API_KEY,
+    // Google Gemini API
+    GOOGLE_COMPLETIONS_API: ENV.GOOGLE_COMPLETIONS_API,
+    // Google Gemini Model
+    GOOGLE_COMPLETIONS_MODEL: ENV.GOOGLE_COMPLETIONS_MODEL,
+
+
+    // mistral api key
+    MISTRAL_API_KEY: ENV.MISTRAL_API_KEY,
+    // mistral api base
+    MISTRAL_COMPLETIONS_API: ENV.MISTRAL_COMPLETIONS_API,
+    // mistral api model
+    MISTRAL_CHAT_MODEL: ENV.MISTRAL_CHAT_MODEL,
   };
 
   USER_DEFINE = {
+    VALID_KEYS: ['OPENAI_API_EXTRA_PARAMS', 'SYSTEM_INIT_MESSAGE'],
     // 自定义角色
     ROLE: {},
   };
@@ -44,6 +109,7 @@ export class Context {
     chatId: null, // 会话 id, private 场景为发言人 id, group/supergroup 场景为群组 id
     speakerId: null, // 发言人 id
     role: null, // 角色
+    extraMessageContext: null, // 额外消息上下文
   };
 
   /**
@@ -69,40 +135,25 @@ export class Context {
   async _initUserConfig(storeKey) {
     try {
       const userConfig = JSON.parse(await DATABASE.get(storeKey));
-      for (const key in userConfig) {
-        if (
-          key === 'USER_DEFINE' &&
-          typeof this.USER_DEFINE === typeof userConfig[key]
-        ) {
-          this._initUserDefine(userConfig[key]);
-        } else {
-          if (
-            this.USER_CONFIG.hasOwnProperty(key) &&
-            typeof this.USER_CONFIG[key] === typeof userConfig[key]
-          ) {
-            this.USER_CONFIG[key] = userConfig[key];
-          }
-        }
+      const keys = userConfig?.DEFINE_KEYS || [];
+      this.USER_CONFIG.DEFINE_KEYS = keys;
+      const userDefine = 'USER_DEFINE';
+      if (userConfig[userDefine]) {
+        mergeObject(this.USER_DEFINE, userConfig[userDefine], this.USER_DEFINE.VALID_KEYS);
+        delete userConfig[userDefine];
       }
+      mergeObject(this.USER_CONFIG, userConfig, keys);
     } catch (e) {
       console.error(e);
     }
-  }
-
-  /**
-   * @inner
-   * @param {object} userDefine
-   */
-  _initUserDefine(userDefine) {
-    for (const key in userDefine) {
-      if (
-        this.USER_DEFINE.hasOwnProperty(key) &&
-        typeof this.USER_DEFINE[key] === typeof userDefine[key]
-      ) {
-        this.USER_DEFINE[key] = userDefine[key];
+    {
+      const aiProvider = new Set('auto,openai,azure,workers,gemini,mistral'.split(','));
+      if (!aiProvider.has(this.USER_CONFIG.AI_PROVIDER)) {
+        this.USER_CONFIG.AI_PROVIDER = 'auto';
       }
     }
   }
+
 
   /**
    * @param {Request} request
@@ -185,39 +236,10 @@ export class Context {
     const chatId = message?.chat?.id;
     const replyId = CONST.GROUP_TYPES.includes(message.chat?.type) ? message.message_id : null;
     this._initChatContext(chatId, replyId);
-    console.log(this.CURRENT_CHAT_CONTEXT);
+    // console.log(this.CURRENT_CHAT_CONTEXT);
     await this._initShareContext(message);
-    console.log(this.SHARE_CONTEXT);
+    // console.log(this.SHARE_CONTEXT);
     await this._initUserConfig(this.SHARE_CONTEXT.configStoreKey);
-    console.log(this.USER_CONFIG);
-  }
-
-  /**
-   * @return {string|null}
-   */
-  openAIKeyFromContext() {
-    if (ENV.AZURE_COMPLETIONS_API) {
-      return ENV.AZURE_API_KEY;
-    }
-    if (this.USER_CONFIG.OPENAI_API_KEY) {
-      return this.USER_CONFIG.OPENAI_API_KEY;
-    }
-    if (ENV.API_KEY.length === 0) {
-      return null;
-    }
-    return ENV.API_KEY[Math.floor(Math.random() * ENV.API_KEY.length)];
-  }
-
-  /**
-   * @return {boolean}
-   */
-  hasValidOpenAIKey() {
-    if (ENV.AZURE_COMPLETIONS_API) {
-      return ENV.AZURE_API_KEY !== null;
-    }
-    if (this.USER_CONFIG.OPENAI_API_KEY) {
-      return true;
-    }
-    return ENV.API_KEY.length > 0;
+    // console.log(this.USER_CONFIG);
   }
 }
