@@ -1,11 +1,97 @@
-// src/env.js
+// src/config/env.js
+var UserConfig = class {
+  // -- 非配置属性 --
+  DEFINE_KEYS = [];
+  // -- 通用配置 --
+  //
+  // AI提供商: auto, openai, azure, workers, gemini, mistral
+  AI_PROVIDER = "auto";
+  // AI图片提供商: auto, openai, azure, workers
+  AI_IMAGE_PROVIDER = "auto";
+  // 全局默认初始化消息
+  SYSTEM_INIT_MESSAGE = null;
+  // 全局默认初始化消息角色
+  SYSTEM_INIT_MESSAGE_ROLE = "system";
+  // -- Open AI 配置 --
+  //
+  // OpenAI API Key
+  OPENAI_API_KEY = [];
+  // OpenAI的模型名称
+  OPENAI_CHAT_MODEL = "gpt-4o-mini";
+  // OpenAI API BASE ``
+  OPENAI_API_BASE = "https://api.openai.com/v1";
+  // OpenAI API Extra Params
+  OPENAI_API_EXTRA_PARAMS = {};
+  // -- DALLE 配置 --
+  //
+  // DALL-E的模型名称
+  DALL_E_MODEL = "dall-e-2";
+  // DALL-E图片尺寸
+  DALL_E_IMAGE_SIZE = "512x512";
+  // DALL-E图片质量
+  DALL_E_IMAGE_QUALITY = "standard";
+  // DALL-E图片风格
+  DALL_E_IMAGE_STYLE = "vivid";
+  // -- AZURE 配置 --
+  //
+  // Azure API Key
+  AZURE_API_KEY = null;
+  // Azure Completions API
+  // https://RESOURCE_NAME.openai.azure.com/openai/deployments/MODEL_NAME/chat/completions?api-version=VERSION_NAME
+  AZURE_COMPLETIONS_API = null;
+  // Azure DallE API
+  // https://RESOURCE_NAME.openai.azure.com/openai/deployments/MODEL_NAME/images/generations?api-version=VERSION_NAME
+  AZURE_DALLE_API = null;
+  // -- Workers 配置 --
+  //
+  // Cloudflare Account ID
+  CLOUDFLARE_ACCOUNT_ID = null;
+  // Cloudflare Token
+  CLOUDFLARE_TOKEN = null;
+  // Text Generation Model
+  WORKERS_CHAT_MODEL = "@cf/mistral/mistral-7b-instruct-v0.1 ";
+  // Text-to-Image Model
+  WORKERS_IMAGE_MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
+  // -- Gemini 配置 --
+  //
+  // Google Gemini API Key
+  GOOGLE_API_KEY = null;
+  // Google Gemini API
+  GOOGLE_COMPLETIONS_API = "https://generativelanguage.googleapis.com/v1beta/models/";
+  // Google Gemini Model
+  GOOGLE_COMPLETIONS_MODEL = "gemini-pro";
+  // -- Mistral 配置 --
+  //
+  // mistral api key
+  MISTRAL_API_KEY = null;
+  // mistral api base
+  MISTRAL_API_BASE = "https://api.mistral.ai/v1";
+  // mistral api model
+  MISTRAL_CHAT_MODEL = "mistral-tiny";
+  // -- Cohere 配置 --
+  //
+  // cohere api key
+  COHERE_API_KEY = null;
+  // cohere api base
+  COHERE_API_BASE = "https://api.cohere.com/v1";
+  // cohere api model
+  COHERE_CHAT_MODEL = "command-r-plus";
+  // -- Anthropic 配置 --
+  //
+  // Anthropic api key
+  ANTHROPIC_API_KEY = null;
+  // Anthropic api base
+  ANTHROPIC_API_BASE = "https://api.anthropic.com/v1";
+  // Anthropic api model
+  ANTHROPIC_CHAT_MODEL = "claude-3-haiku-20240307";
+};
 var Environment = class {
   // -- 版本数据 --
   //
   // 当前版本
-  BUILD_TIMESTAMP = 1709018751;
+  BUILD_TIMESTAMP = 1723103175;
   // 当前版本 commit id
-  BUILD_VERSION = "8a48d6a";
+  BUILD_VERSION = "0187454";
   // -- 基础配置 --
   /**
    * @type {I18n | null}
@@ -15,14 +101,23 @@ var Environment = class {
   LANGUAGE = "zh-cn";
   // 检查更新的分支
   UPDATE_BRANCH = "master";
-  // AI提供商: auto, openai, azure, workers, gemini, mistral
-  AI_PROVIDER = "auto";
+  // Chat Complete API Timeout
+  CHAT_COMPLETE_API_TIMEOUT = 0;
   // -- Telegram 相关 --
   //
   // Telegram API Domain
   TELEGRAM_API_DOMAIN = "https://api.telegram.org";
   // 允许访问的Telegram Token， 设置时以逗号分隔
   TELEGRAM_AVAILABLE_TOKENS = [];
+  // 默认消息模式
+  DEFAULT_PARSE_MODE = "Markdown";
+  // 最小stream模式消息间隔，小于等于0则不限制
+  TELEGRAM_MIN_STREAM_INTERVAL = 0;
+  // 图片尺寸偏移 0为第一位，-1为最后一位, 越靠后的图片越大。PS: 图片过大可能导致token消耗过多，或者workers超时或内存不足
+  // 默认选择次低质量的图片
+  TELEGRAM_PHOTO_SIZE_OFFSET = 1;
+  // 向LLM优先传递图片方式：url, base64
+  TELEGRAM_IMAGE_TRANSFER_MODE = "url";
   // --  权限相关 --
   //
   // 允许所有人使用
@@ -30,7 +125,16 @@ var Environment = class {
   // 白名单
   CHAT_WHITE_LIST = [];
   // 用户配置
-  LOCK_USER_CONFIG_KEYS = [];
+  LOCK_USER_CONFIG_KEYS = [
+    // 默认为API BASE 防止被替换导致token 泄露
+    "OPENAI_API_BASE",
+    "GOOGLE_COMPLETIONS_API",
+    "MISTRAL_API_BASE",
+    "COHERE_API_BASE",
+    "ANTHROPIC_API_BASE",
+    "AZURE_COMPLETIONS_API",
+    "AZURE_DALLE_API"
+  ];
   // -- 群组相关 --
   //
   // 允许访问的Telegram Token 对应的Bot Name， 设置时以逗号分隔
@@ -48,47 +152,17 @@ var Environment = class {
   // 最大历史记录长度
   MAX_HISTORY_LENGTH = 20;
   // 最大消息长度
-  MAX_TOKEN_LENGTH = 2048;
-  // 使用GPT3的TOKEN计数
-  GPT3_TOKENS_COUNT = false;
-  // GPT3计数器资源地址
-  GPT3_TOKENS_COUNT_REPO = "https://raw.githubusercontent.com/tbxark-arc/GPT-3-Encoder/master";
-  // -- Prompt 相关 --
-  //
-  // 全局默认初始化消息
-  SYSTEM_INIT_MESSAGE = null;
-  // 全局默认初始化消息角色
-  SYSTEM_INIT_MESSAGE_ROLE = "system";
-  // -- Open AI 配置 --
-  //
-  // OpenAI API Key
-  API_KEY = [];
-  // OpenAI的模型名称
-  CHAT_MODEL = "gpt-3.5-turbo";
-  // OpenAI API Domain 可替换兼容openai api的其他服务商
-  OPENAI_API_DOMAIN = "https://api.openai.com";
-  // OpenAI API BASE `https://api.openai.com/v1`
-  OPENAI_API_BASE = null;
-  // -- DALLE 配置 --
-  //
-  // DALL-E的模型名称
-  DALL_E_MODEL = "dall-e-2";
-  // DALL-E图片尺寸
-  DALL_E_IMAGE_SIZE = "512x512";
-  // DALL-E图片质量
-  DALL_E_IMAGE_QUALITY = "standard";
-  // DALL-E图片风格
-  DALL_E_IMAGE_STYLE = "vivid";
+  MAX_TOKEN_LENGTH = -1;
   // -- 特性开关 --
   //
-  // 是否开启使用统计
-  ENABLE_USAGE_STATISTICS = false;
   // 隐藏部分命令按钮
-  HIDE_COMMAND_BUTTONS = ["/role"];
+  HIDE_COMMAND_BUTTONS = [];
   // 显示快捷回复按钮
   SHOW_REPLY_BUTTON = false;
   // 而外引用消息开关
   EXTRA_MESSAGE_CONTEXT = false;
+  // 开启Telegraph图床
+  TELEGRAPH_ENABLE = false;
   // -- 模式开关 --
   //
   // 使用流模式
@@ -99,98 +173,100 @@ var Environment = class {
   DEBUG_MODE = false;
   // 开发模式
   DEV_MODE = false;
-  // -- AZURE 配置 --
-  //
-  // Azure API Key
-  AZURE_API_KEY = null;
-  // Azure Completions API
-  AZURE_COMPLETIONS_API = null;
-  // Azure DallE API
-  AZURE_DALLE_API = null;
-  // Cloudflare Account ID
-  CLOUDFLARE_ACCOUNT_ID = null;
-  // Cloudflare Token
-  CLOUDFLARE_TOKEN = null;
-  // Text Generation Model
-  WORKERS_CHAT_MODEL = "@cf/mistral/mistral-7b-instruct-v0.1 ";
-  // Text-to-Image Model
-  WORKERS_IMAGE_MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
-  // Google Gemini API Key
-  GOOGLE_API_KEY = null;
-  // Google Gemini API
-  GOOGLE_COMPLETIONS_API = "https://generativelanguage.googleapis.com/v1beta/models/";
-  // Google Gemini Model
-  GOOGLE_COMPLETIONS_MODEL = "gemini-pro";
-  // mistral api key
-  MISTRAL_API_KEY = null;
-  // mistral api base
-  MISTRAL_COMPLETIONS_API = "https://api.mistral.ai/v1/chat/completions";
-  // mistral api model
-  MISTRAL_CHAT_MODEL = "mistral-tiny";
+  USER_CONFIG = new UserConfig();
 };
 var ENV = new Environment();
 var DATABASE = null;
 var API_GUARD = null;
 var CUSTOM_COMMAND = {};
+var CUSTOM_COMMAND_DESCRIPTION = {};
 var CONST = {
   PASSWORD_KEY: "chat_history_password",
-  GROUP_TYPES: ["group", "supergroup"],
-  USER_AGENT: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.2 Safari/605.1.15"
+  GROUP_TYPES: ["group", "supergroup"]
 };
+var ENV_TYPES = {
+  SYSTEM_INIT_MESSAGE: "string",
+  AZURE_API_KEY: "string",
+  AZURE_COMPLETIONS_API: "string",
+  AZURE_DALLE_API: "string",
+  CLOUDFLARE_ACCOUNT_ID: "string",
+  CLOUDFLARE_TOKEN: "string",
+  GOOGLE_API_KEY: "string",
+  MISTRAL_API_KEY: "string",
+  COHERE_API_KEY: "string",
+  ANTHROPIC_API_KEY: "string"
+};
+var ENV_KEY_MAPPER = {
+  CHAT_MODEL: "OPENAI_CHAT_MODEL",
+  API_KEY: "OPENAI_API_KEY",
+  WORKERS_AI_MODEL: "WORKERS_CHAT_MODEL"
+};
+function parseArray(raw) {
+  if (raw.startsWith("[") && raw.endsWith("]")) {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  return raw.split(",");
+}
+function mergeEnvironment(target, source) {
+  const sourceKeys = new Set(Object.keys(source));
+  for (const key of Object.keys(target)) {
+    if (!sourceKeys.has(key)) {
+      continue;
+    }
+    const t = ENV_TYPES[key] || typeof target[key];
+    if (typeof source[key] !== "string") {
+      target[key] = source[key];
+      continue;
+    }
+    switch (t) {
+      case "number":
+        target[key] = parseInt(source[key], 10);
+        break;
+      case "boolean":
+        target[key] = (source[key] || "false") === "true";
+        break;
+      case "string":
+        target[key] = source[key];
+        break;
+      case "array":
+        target[key] = parseArray(source[key]);
+        break;
+      case "object":
+        if (Array.isArray(target[key])) {
+          target[key] = parseArray(source[key]);
+        } else {
+          try {
+            target[key] = JSON.parse(source[key]);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        break;
+      default:
+        target[key] = source[key];
+        break;
+    }
+  }
+}
 function initEnv(env, i18n2) {
   DATABASE = env.DATABASE;
   API_GUARD = env.API_GUARD;
-  const envValueTypes = {
-    SYSTEM_INIT_MESSAGE: "string",
-    OPENAI_API_BASE: "string",
-    AZURE_API_KEY: "string",
-    AZURE_COMPLETIONS_API: "string",
-    AZURE_DALLE_API: "string",
-    CLOUDFLARE_ACCOUNT_ID: "string",
-    CLOUDFLARE_TOKEN: "string",
-    GOOGLE_API_KEY: "string",
-    MISTRAL_API_KEY: "string"
-  };
   const customCommandPrefix = "CUSTOM_COMMAND_";
+  const customCommandDescriptionPrefix = "COMMAND_DESCRIPTION_";
   for (const key of Object.keys(env)) {
     if (key.startsWith(customCommandPrefix)) {
       const cmd = key.substring(customCommandPrefix.length);
       CUSTOM_COMMAND["/" + cmd] = env[key];
+      CUSTOM_COMMAND_DESCRIPTION["/" + cmd] = env[customCommandDescriptionPrefix + cmd];
     }
   }
-  for (const key of Object.keys(ENV)) {
-    const t = envValueTypes[key] ? envValueTypes[key] : ENV[key] !== null ? typeof ENV[key] : "string";
-    if (env[key]) {
-      switch (t) {
-        case "number":
-          ENV[key] = parseInt(env[key]) || ENV[key];
-          break;
-        case "boolean":
-          ENV[key] = (env[key] || "false") === "true";
-          break;
-        case "string":
-          ENV[key] = env[key];
-          break;
-        case "array":
-          ENV[key] = env[key].split(",");
-          break;
-        case "object":
-          if (Array.isArray(ENV[key])) {
-            ENV[key] = env[key].split(",");
-          } else {
-            try {
-              ENV[key] = JSON.parse(env[key]);
-            } catch (e) {
-              console.error(e);
-            }
-          }
-          break;
-        default:
-          ENV[key] = env[key];
-          break;
-      }
-    }
-  }
+  mergeEnvironment(ENV, env);
+  mergeEnvironment(ENV.USER_CONFIG, env);
+  ENV.USER_CONFIG.DEFINE_KEYS = [];
   {
     ENV.I18N = i18n2((ENV.LANGUAGE || "cn").toLowerCase());
     if (env.TELEGRAM_TOKEN && !ENV.TELEGRAM_AVAILABLE_TOKENS.includes(env.TELEGRAM_TOKEN)) {
@@ -199,122 +275,69 @@ function initEnv(env, i18n2) {
       }
       ENV.TELEGRAM_AVAILABLE_TOKENS.push(env.TELEGRAM_TOKEN);
     }
-    if (env.WORKERS_AI_MODEL) {
-      ENV.WORKERS_CHAT_MODEL = env.WORKERS_AI_MODEL;
+    if (env.OPENAI_API_DOMAIN && !ENV.OPENAI_API_BASE) {
+      ENV.USER_CONFIG.OPENAI_API_BASE = `${env.OPENAI_API_DOMAIN}/v1`;
     }
-    if (!ENV.OPENAI_API_BASE) {
-      ENV.OPENAI_API_BASE = `${ENV.OPENAI_API_DOMAIN}/v1`;
+    if (env.WORKERS_AI_MODEL && !ENV.USER_CONFIG.WORKERS_CHAT_MODEL) {
+      ENV.USER_CONFIG.WORKERS_CHAT_MODEL = env.WORKERS_AI_MODEL;
     }
-    if (!ENV.SYSTEM_INIT_MESSAGE) {
-      ENV.SYSTEM_INIT_MESSAGE = ENV.I18N?.env?.system_init_message || "You are a helpful assistant";
+    if (env.API_KEY && ENV.USER_CONFIG.OPENAI_API_KEY.length === 0) {
+      ENV.USER_CONFIG.OPENAI_API_KEY = env.API_KEY.split(",");
+    }
+    if (env.CHAT_MODEL && !ENV.USER_CONFIG.OPENAI_CHAT_MODEL) {
+      ENV.USER_CONFIG.OPENAI_CHAT_MODEL = env.CHAT_MODEL;
+    }
+    if (!ENV.USER_CONFIG.SYSTEM_INIT_MESSAGE) {
+      ENV.USER_CONFIG.SYSTEM_INIT_MESSAGE = ENV.I18N?.env?.system_init_message || "You are a helpful assistant";
     }
   }
 }
 
-// src/context.js
-function mergeObject(target, source, keys) {
-  for (const key of Object.keys(target)) {
-    if (source[key]) {
-      if (keys !== null && !keys.includes(key)) {
-        continue;
-      }
-      if (typeof source[key] === typeof target[key]) {
-        target[key] = source[key];
-      }
+// src/config/context.js
+function trimUserConfig(userConfig) {
+  const config = {
+    ...userConfig
+  };
+  const keysSet = new Set(userConfig.DEFINE_KEYS);
+  for (const key of ENV.LOCK_USER_CONFIG_KEYS) {
+    keysSet.delete(key);
+  }
+  keysSet.add("DEFINE_KEYS");
+  for (const key of Object.keys(config)) {
+    if (!keysSet.has(key)) {
+      delete config[key];
     }
   }
+  return config;
 }
+var ShareContext = class {
+  currentBotId = null;
+  currentBotToken = null;
+  currentBotName = null;
+  chatHistoryKey = null;
+  chatLastMessageIdKey = null;
+  configStoreKey = null;
+  groupAdminKey = null;
+  usageKey = null;
+  chatType = null;
+  chatId = null;
+  speakerId = null;
+  extraMessageContext = null;
+};
+var CurrentChatContext = class {
+  chat_id = null;
+  reply_to_message_id = null;
+  parse_mode = ENV.DEFAULT_PARSE_MODE;
+  message_id = null;
+  reply_markup = null;
+  allow_sending_without_reply = null;
+  disable_web_page_preview = null;
+};
 var Context = class {
   // 用户配置
-  USER_CONFIG = {
-    // 自定义的配置的Key
-    DEFINE_KEYS: [],
-    // AI提供商
-    AI_PROVIDER: ENV.AI_PROVIDER,
-    // 聊天模型
-    CHAT_MODEL: ENV.CHAT_MODEL,
-    // OenAI API Key
-    OPENAI_API_KEY: "",
-    // OpenAI API 额外参数
-    OPENAI_API_EXTRA_PARAMS: {},
-    // 系统初始化消息
-    SYSTEM_INIT_MESSAGE: ENV.SYSTEM_INIT_MESSAGE,
-    // DALL-E的模型名称
-    DALL_E_MODEL: ENV.DALL_E_MODEL,
-    // DALL-E图片尺寸
-    DALL_E_IMAGE_SIZE: ENV.DALL_E_IMAGE_SIZE,
-    // DALL-E图片质量
-    DALL_E_IMAGE_QUALITY: ENV.DALL_E_IMAGE_QUALITY,
-    // DALL-E图片风格
-    DALL_E_IMAGE_STYLE: ENV.DALL_E_IMAGE_STYLE,
-    // Azure API Key
-    AZURE_API_KEY: ENV.AZURE_API_KEY,
-    // Azure Completions API
-    AZURE_COMPLETIONS_API: ENV.AZURE_COMPLETIONS_API,
-    // Azure DALL-E API
-    AZURE_DALLE_API: ENV.AZURE_DALLE_API,
-    // WorkersAI聊天记录模型
-    WORKERS_CHAT_MODEL: ENV.WORKERS_CHAT_MODEL,
-    // WorkersAI图片模型
-    WORKER_IMAGE_MODEL: ENV.WORKERS_IMAGE_MODEL,
-    // Google Gemini API Key
-    GOOGLE_API_KEY: ENV.GOOGLE_API_KEY,
-    // Google Gemini API
-    GOOGLE_COMPLETIONS_API: ENV.GOOGLE_COMPLETIONS_API,
-    // Google Gemini Model
-    GOOGLE_COMPLETIONS_MODEL: ENV.GOOGLE_COMPLETIONS_MODEL,
-    // mistral api key
-    MISTRAL_API_KEY: ENV.MISTRAL_API_KEY,
-    // mistral api base
-    MISTRAL_COMPLETIONS_API: ENV.MISTRAL_COMPLETIONS_API,
-    // mistral api model
-    MISTRAL_CHAT_MODEL: ENV.MISTRAL_CHAT_MODEL
-  };
-  USER_DEFINE = {
-    VALID_KEYS: ["OPENAI_API_EXTRA_PARAMS", "SYSTEM_INIT_MESSAGE"],
-    // 自定义角色
-    ROLE: {}
-  };
-  // 当前聊天上下文
-  CURRENT_CHAT_CONTEXT = {
-    chat_id: null,
-    reply_to_message_id: null,
-    // 如果是群组，这个值为消息ID，否则为null
-    parse_mode: "Markdown",
-    message_id: null,
-    // 编辑消息的ID
-    reply_markup: null
-    // 回复键盘
-  };
-  // 共享上下文
-  SHARE_CONTEXT = {
-    currentBotId: null,
-    // 当前机器人 ID
-    currentBotToken: null,
-    // 当前机器人 Token
-    currentBotName: null,
-    // 当前机器人名称: xxx_bot
-    chatHistoryKey: null,
-    // history:chat_id:bot_id:(from_id)
-    chatLastMessageIDKey: null,
-    // last_message_id:(chatHistoryKey)
-    configStoreKey: null,
-    // user_config:chat_id:bot_id:(from_id)
-    groupAdminKey: null,
-    // group_admin:group_id
-    usageKey: null,
-    // usage:bot_id
-    chatType: null,
-    // 会话场景, private/group/supergroup 等, 来源 message.chat.type
-    chatId: null,
-    // 会话 id, private 场景为发言人 id, group/supergroup 场景为群组 id
-    speakerId: null,
-    // 发言人 id
-    role: null,
-    // 角色
-    extraMessageContext: null
-    // 额外消息上下文
-  };
+  USER_CONFIG = new UserConfig();
+  CURRENT_CHAT_CONTEXT = new CurrentChatContext();
+  SHARE_CONTEXT = new ShareContext();
   /**
    * @inner
    * @param {string | number} chatId
@@ -330,29 +353,18 @@ var Context = class {
   //
   /**
    * 初始化用户配置
-   *
    * @inner
-   * @param {string} storeKey
+   * @param {string | null} storeKey
    */
   async _initUserConfig(storeKey) {
     try {
+      this.USER_CONFIG = {
+        ...ENV.USER_CONFIG
+      };
       const userConfig = JSON.parse(await DATABASE.get(storeKey));
-      const keys = userConfig?.DEFINE_KEYS || [];
-      this.USER_CONFIG.DEFINE_KEYS = keys;
-      const userDefine = "USER_DEFINE";
-      if (userConfig[userDefine]) {
-        mergeObject(this.USER_DEFINE, userConfig[userDefine], this.USER_DEFINE.VALID_KEYS);
-        delete userConfig[userDefine];
-      }
-      mergeObject(this.USER_CONFIG, userConfig, keys);
+      mergeEnvironment(this.USER_CONFIG, trimUserConfig(userConfig));
     } catch (e) {
       console.error(e);
-    }
-    {
-      const aiProvider = new Set("auto,openai,azure,workers,gemini,mistral".split(","));
-      if (!aiProvider.has(this.USER_CONFIG.AI_PROVIDER)) {
-        this.USER_CONFIG.AI_PROVIDER = "auto";
-      }
     }
   }
   /**
@@ -399,8 +411,14 @@ var Context = class {
       }
       groupAdminKey = `group_admin:${id}`;
     }
+    if (message?.chat?.is_forum && message?.is_topic_message) {
+      if (message?.message_thread_id) {
+        historyKey += `:${message.message_thread_id}`;
+        configStoreKey += `:${message.message_thread_id}`;
+      }
+    }
     this.SHARE_CONTEXT.chatHistoryKey = historyKey;
-    this.SHARE_CONTEXT.chatLastMessageIDKey = `last_message_id:${historyKey}`;
+    this.SHARE_CONTEXT.chatLastMessageIdKey = `last_message_id:${historyKey}`;
     this.SHARE_CONTEXT.configStoreKey = configStoreKey;
     this.SHARE_CONTEXT.groupAdminKey = groupAdminKey;
     this.SHARE_CONTEXT.chatType = message.chat?.type;
@@ -409,7 +427,7 @@ var Context = class {
   }
   /**
    * @param {TelegramMessage} message
-   * @return {Promise<void>}
+   * @returns {Promise<void>}
    */
   async initContext(message) {
     const chatId = message?.chat?.id;
@@ -420,7 +438,58 @@ var Context = class {
   }
 };
 
-// src/telegram.js
+// src/utils/md2tgmd.js
+var escapeChars = /([\_\*\[\]\(\)\\\~\`\>\#\+\-\=\|\{\}\.\!])/g;
+function escape(text) {
+  const lines = text.split("\n");
+  const stack = [];
+  const result = [];
+  let linetrim = "";
+  for (const [i, line] of lines.entries()) {
+    linetrim = line.trim();
+    let startIndex;
+    if (/^```.+/.test(linetrim)) {
+      stack.push(i);
+    } else if (linetrim === "```") {
+      if (stack.length) {
+        startIndex = stack.pop();
+        if (!stack.length) {
+          const content = lines.slice(startIndex, i + 1).join("\n");
+          result.push(handleEscape(content, "code"));
+          continue;
+        }
+      } else {
+        stack.push(i);
+      }
+    }
+    if (!stack.length) {
+      result.push(handleEscape(line));
+    }
+  }
+  if (stack.length) {
+    const last = lines.slice(stack[0]).join("\n") + "\n```";
+    result.push(handleEscape(last, "code"));
+  }
+  return result.join("\n");
+}
+function handleEscape(text, type = "text") {
+  if (!text.trim()) {
+    return text;
+  }
+  if (type === "text") {
+    text = text.replace(escapeChars, "\\$1").replace(/\\\*\\\*(.*?[^\\])\\\*\\\*/g, "*$1*").replace(/\\_\\_(.*?[^\\])\\_\\_/g, "__$1__").replace(/\\_(.*?[^\\])\\_/g, "_$1_").replace(/\\~(.*?[^\\])\\~/g, "~$1~").replace(/\\\|\\\|(.*?[^\\])\\\|\\\|/g, "||$1||").replace(/\\\[([^\]]+?)\\\]\\\((.+?)\\\)/g, "[$1]($2)").replace(/\\\`(.*?[^\\])\\\`/g, "`$1`").replace(/\\\\\\([\_\*\[\]\(\)\\\~\`\>\#\+\-\=\|\{\}\.\!])/g, "\\$1").replace(/^(\s*)\\(>.+\s*)$/gm, "$1$2").replace(/^(\s*)\\-\s*(.+)$/gm, "$1\u2022 $2").replace(/^((\\#){1,3}\s)(.+)/gm, "$1*$3*");
+  } else {
+    const codeBlank = text.length - text.trimStart().length;
+    if (codeBlank > 0) {
+      const blankReg = new RegExp(`^\\s{${codeBlank}}`, "gm");
+      text = text.replace(blankReg, "");
+    }
+    text = text.trimEnd().replace(/([\\\`])/g, "\\$1").replace(/^\\`\\`\\`([\s\S]+)\\`\\`\\`$/g, "```$1```");
+  }
+  return text;
+}
+
+// src/telegram/telegram.js
 async function sendMessage(message, token, context) {
   const body = {
     text: message
@@ -447,22 +516,32 @@ async function sendMessage(message, token, context) {
 }
 async function sendMessageToTelegram(message, token, context) {
   const chatContext = context;
-  if (message.length <= 4096) {
+  const originMessage = message;
+  const limit = 4096;
+  if (chatContext.parse_mode === "MarkdownV2") {
+    message = escape(message);
+  }
+  if (message.length <= limit) {
     const resp = await sendMessage(message, token, chatContext);
     if (resp.status === 200) {
       return resp;
     } else {
+      message = originMessage;
       chatContext.parse_mode = null;
       return await sendMessage(message, token, chatContext);
     }
   }
-  const limit = 4096;
+  message = originMessage;
   chatContext.parse_mode = null;
+  let lastMessageResponse = null;
   for (let i = 0; i < message.length; i += limit) {
     const msg = message.slice(i, Math.min(i + limit, message.length));
-    await sendMessage(msg, token, chatContext);
+    if (i > 0) {
+      chatContext.message_id = null;
+    }
+    lastMessageResponse = await sendMessage(msg, token, chatContext);
   }
-  return new Response("Message batch send", { status: 200 });
+  return lastMessageResponse;
 }
 function sendMessageToTelegramWithContext(context) {
   return async (message) => {
@@ -488,7 +567,7 @@ function deleteMessageFromTelegramWithContext(context) {
 }
 async function sendPhotoToTelegram(photo, token, context) {
   const url = `${ENV.TELEGRAM_API_DOMAIN}/bot${token}/sendPhoto`;
-  let body = null;
+  let body;
   const headers = {};
   if (typeof photo === "string") {
     body = {
@@ -635,163 +714,1512 @@ async function getBot(token) {
     return resp;
   }
 }
+async function getFileLink(fileId, token) {
+  const resp = await fetch(
+    `${ENV.TELEGRAM_API_DOMAIN}/bot${token}/getFile`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ file_id: fileId })
+    }
+  ).then((res) => res.json());
+  if (resp.ok && resp.result.file_path) {
+    return `https://api.telegram.org/file/bot${token}/${resp.result.file_path}`;
+  }
+  return "";
+}
 
-// src/vendors/gpt3.js
-async function gpt3TokensCounter(repo, loader) {
-  const encoder = await loader("encoder_raw_file", `${repo}/encoder.json`).then((x) => JSON.parse(x));
-  const bpe_file = await loader("bpe_raw_file", `${repo}/vocab.bpe`);
-  const range = (x, y) => {
-    const res = Array.from(Array(y).keys()).slice(x);
-    return res;
-  };
-  const ord = (x) => {
-    return x.charCodeAt(0);
-  };
-  const chr = (x) => {
-    return String.fromCharCode(x);
-  };
-  const textEncoder = new TextEncoder("utf-8");
-  const encodeStr = (str) => {
-    return Array.from(textEncoder.encode(str)).map((x) => x.toString());
-  };
-  const dictZip = (x, y) => {
-    const result = {};
-    x.map((_, i) => {
-      result[x[i]] = y[i];
-    });
-    return result;
-  };
-  function bytes_to_unicode() {
-    const bs = range(ord("!"), ord("~") + 1).concat(range(ord("\xA1"), ord("\xAC") + 1), range(ord("\xAE"), ord("\xFF") + 1));
-    let cs = bs.slice();
-    let n = 0;
-    for (let b = 0; b < 2 ** 8; b++) {
-      if (!bs.includes(b)) {
-        bs.push(b);
-        cs.push(2 ** 8 + n);
-        n = n + 1;
+// src/agent/stream.js
+var Stream = class {
+  constructor(response, controller, decoder = null, parser = null) {
+    this.response = response;
+    this.controller = controller;
+    this.decoder = decoder || new SSEDecoder();
+    this.parser = parser || openaiSseJsonParser;
+  }
+  async *iterMessages() {
+    if (!this.response.body) {
+      this.controller.abort();
+      throw new Error(`Attempted to iterate over a response with no body`);
+    }
+    const lineDecoder = new LineDecoder();
+    const iter = this.response.body;
+    for await (const chunk of iter) {
+      for (const line of lineDecoder.decode(chunk)) {
+        const sse = this.decoder.decode(line);
+        if (sse)
+          yield sse;
       }
     }
-    cs = cs.map((x) => chr(x));
-    const result = {};
-    bs.map((_, i) => {
-      result[bs[i]] = cs[i];
-    });
-    return result;
+    for (const line of lineDecoder.flush()) {
+      const sse = this.decoder.decode(line);
+      if (sse)
+        yield sse;
+    }
   }
-  function get_pairs(word) {
-    const pairs = /* @__PURE__ */ new Set();
-    let prev_char = word[0];
-    for (let i = 1; i < word.length; i++) {
-      const char = word[i];
-      pairs.add([prev_char, char]);
-      prev_char = char;
-    }
-    return pairs;
-  }
-  const pat = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
-  const decoder = {};
-  Object.keys(encoder).map((x) => {
-    decoder[encoder[x]] = x;
-  });
-  const lines = bpe_file.split("\n");
-  const bpe_merges = lines.slice(1, lines.length - 1).map((x) => {
-    return x.split(/(\s+)/).filter(function(e) {
-      return e.trim().length > 0;
-    });
-  });
-  const byte_encoder = bytes_to_unicode();
-  const byte_decoder = {};
-  Object.keys(byte_encoder).map((x) => {
-    byte_decoder[byte_encoder[x]] = x;
-  });
-  const bpe_ranks = dictZip(bpe_merges, range(0, bpe_merges.length));
-  const cache = /* @__PURE__ */ new Map();
-  function bpe(token) {
-    if (cache.has(token)) {
-      return cache.get(token);
-    }
-    ``;
-    let word = token.split("");
-    let pairs = get_pairs(word);
-    if (!pairs) {
-      return token;
-    }
-    while (true) {
-      const minPairs = {};
-      Array.from(pairs).map((pair) => {
-        const rank = bpe_ranks[pair];
-        minPairs[isNaN(rank) ? 1e11 : rank] = pair;
-      });
-      const bigram = minPairs[Math.min(...Object.keys(minPairs).map(
-        (x) => {
-          return parseInt(x);
+  async *[Symbol.asyncIterator]() {
+    let done = false;
+    try {
+      for await (const sse of this.iterMessages()) {
+        if (done) {
+          continue;
         }
-      ))];
-      if (!(bigram in bpe_ranks)) {
-        break;
+        if (!sse) {
+          continue;
+        }
+        const { finish, data } = this.parser(sse);
+        if (finish) {
+          done = finish;
+          continue;
+        }
+        if (data) {
+          yield data;
+        }
       }
-      const first = bigram[0];
-      const second = bigram[1];
-      let new_word = [];
-      let i = 0;
-      while (i < word.length) {
-        const j = word.indexOf(first, i);
-        if (j === -1) {
-          new_word = new_word.concat(word.slice(i));
+      done = true;
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError")
+        return;
+      throw e;
+    } finally {
+      if (!done)
+        this.controller.abort();
+    }
+  }
+};
+var SSEDecoder = class {
+  constructor() {
+    this.event = null;
+    this.data = [];
+    this.chunks = [];
+  }
+  decode(line) {
+    if (line.endsWith("\r")) {
+      line = line.substring(0, line.length - 1);
+    }
+    if (!line) {
+      if (!this.event && !this.data.length) {
+        return null;
+      }
+      const sse = {
+        event: this.event,
+        data: this.data.join("\n")
+      };
+      this.event = null;
+      this.data = [];
+      this.chunks = [];
+      return sse;
+    }
+    this.chunks.push(line);
+    if (line.startsWith(":")) {
+      return null;
+    }
+    let [fieldName, _, value] = this.partition(line, ":");
+    if (value.startsWith(" ")) {
+      value = value.substring(1);
+    }
+    if (fieldName === "event") {
+      this.event = value;
+    } else if (fieldName === "data") {
+      this.data.push(value);
+    }
+    return null;
+  }
+  partition(str, delimiter) {
+    const index = str.indexOf(delimiter);
+    if (index !== -1) {
+      return [str.substring(0, index), delimiter, str.substring(index + delimiter.length)];
+    }
+    return [str, "", ""];
+  }
+};
+function openaiSseJsonParser(sse) {
+  if (sse.data.startsWith("[DONE]")) {
+    return { finish: true };
+  }
+  if (sse.event === null) {
+    try {
+      return { data: JSON.parse(sse.data) };
+    } catch (e) {
+      console.error(e, sse);
+    }
+  }
+  return {};
+}
+function cohereSseJsonParser(sse) {
+  switch (sse.event) {
+    case "text-generation":
+      try {
+        return { data: JSON.parse(sse.data) };
+      } catch (e) {
+        console.error(e, sse.data);
+        return {};
+      }
+    case "stream-start":
+      return {};
+    case "stream-end":
+      return { finish: true };
+    default:
+      return {};
+  }
+}
+function anthropicSseJsonParser(sse) {
+  switch (sse.event) {
+    case "content_block_delta":
+      try {
+        return { data: JSON.parse(sse.data) };
+      } catch (e) {
+        console.error(e, sse.data);
+        return {};
+      }
+    case "message_start":
+    case "content_block_start":
+    case "content_block_stop":
+      return {};
+    case "message_stop":
+      return { finish: true };
+    default:
+      return {};
+  }
+}
+var LineDecoder = class _LineDecoder {
+  constructor() {
+    this.buffer = [];
+    this.trailingCR = false;
+  }
+  decode(chunk) {
+    let text = this.decodeText(chunk);
+    if (this.trailingCR) {
+      text = "\r" + text;
+      this.trailingCR = false;
+    }
+    if (text.endsWith("\r")) {
+      this.trailingCR = true;
+      text = text.slice(0, -1);
+    }
+    if (!text) {
+      return [];
+    }
+    const trailingNewline = _LineDecoder.NEWLINE_CHARS.has(text[text.length - 1] || "");
+    let lines = text.split(_LineDecoder.NEWLINE_REGEXP);
+    if (lines.length === 1 && !trailingNewline) {
+      this.buffer.push(lines[0]);
+      return [];
+    }
+    if (this.buffer.length > 0) {
+      lines = [this.buffer.join("") + lines[0], ...lines.slice(1)];
+      this.buffer = [];
+    }
+    if (!trailingNewline) {
+      this.buffer = [lines.pop() || ""];
+    }
+    return lines;
+  }
+  decodeText(bytes) {
+    var _a;
+    if (bytes == null)
+      return "";
+    if (typeof bytes === "string")
+      return bytes;
+    if (typeof Buffer !== "undefined") {
+      if (bytes instanceof Buffer) {
+        return bytes.toString();
+      }
+      if (bytes instanceof Uint8Array) {
+        return Buffer.from(bytes).toString();
+      }
+      throw new Error(`Unexpected: received non-Uint8Array (${bytes.constructor.name}) stream chunk in an environment with a global "Buffer" defined, which this library assumes to be Node. Please report this error.`);
+    }
+    if (typeof TextDecoder !== "undefined") {
+      if (bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) {
+        (_a = this.textDecoder) !== null && _a !== void 0 ? _a : this.textDecoder = new TextDecoder("utf8");
+        return this.textDecoder.decode(bytes, { stream: true });
+      }
+      throw new Error(`Unexpected: received non-Uint8Array/ArrayBuffer (${bytes.constructor.name}) in a web platform. Please report this error.`);
+    }
+    throw new Error(`Unexpected: neither Buffer nor TextDecoder are available as globals. Please report this error.`);
+  }
+  flush() {
+    if (!this.buffer.length && !this.trailingCR) {
+      return [];
+    }
+    const lines = [this.buffer.join("")];
+    this.buffer = [];
+    this.trailingCR = false;
+    return lines;
+  }
+};
+LineDecoder.NEWLINE_CHARS = /* @__PURE__ */ new Set(["\n", "\r"]);
+LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
+
+// src/agent/request.js
+function fixOpenAICompatibleOptions(options) {
+  options = options || {};
+  options.streamBuilder = options.streamBuilder || function(r, c) {
+    return new Stream(r, c);
+  };
+  options.contentExtractor = options.contentExtractor || function(d) {
+    return d?.choices?.[0]?.delta?.content;
+  };
+  options.fullContentExtractor = options.fullContentExtractor || function(d) {
+    return d.choices?.[0]?.message.content;
+  };
+  options.errorExtractor = options.errorExtractor || function(d) {
+    return d.error?.message;
+  };
+  return options;
+}
+function isJsonResponse(resp) {
+  return resp.headers.get("content-type").indexOf("json") !== -1;
+}
+function isEventStreamResponse(resp) {
+  const types = ["application/stream+json", "text/event-stream"];
+  const content = resp.headers.get("content-type");
+  for (const type of types) {
+    if (content.indexOf(type) !== -1) {
+      return true;
+    }
+  }
+  return false;
+}
+async function requestChatCompletions(url, header, body, context, onStream, onResult = null, options = null) {
+  const controller = new AbortController();
+  const { signal } = controller;
+  let timeoutID = null;
+  let lastUpdateTime = Date.now();
+  if (ENV.CHAT_COMPLETE_API_TIMEOUT > 0) {
+    timeoutID = setTimeout(() => controller.abort(), ENV.CHAT_COMPLETE_API_TIMEOUT);
+  }
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: header,
+    body: JSON.stringify(body),
+    signal
+  });
+  if (timeoutID) {
+    clearTimeout(timeoutID);
+  }
+  options = fixOpenAICompatibleOptions(options);
+  if (onStream && resp.ok && isEventStreamResponse(resp)) {
+    const stream = options.streamBuilder(resp, controller);
+    let contentFull = "";
+    let lengthDelta = 0;
+    let updateStep = 50;
+    try {
+      for await (const data of stream) {
+        const c = options.contentExtractor(data) || "";
+        if (c === "") {
+          continue;
+        }
+        lengthDelta += c.length;
+        contentFull = contentFull + c;
+        if (lengthDelta > updateStep) {
+          if (ENV.TELEGRAM_MIN_STREAM_INTERVAL > 0) {
+            const delta = Date.now() - lastUpdateTime;
+            if (delta < ENV.TELEGRAM_MIN_STREAM_INTERVAL) {
+              continue;
+            }
+            lastUpdateTime = Date.now();
+          }
+          lengthDelta = 0;
+          updateStep += 20;
+          await onStream(`${contentFull}
+...`);
+        }
+      }
+    } catch (e) {
+      contentFull += `
+ERROR: ${e.message}`;
+    }
+    return contentFull;
+  }
+  if (!isJsonResponse(resp)) {
+    throw new Error(resp.statusText);
+  }
+  const result = await resp.json();
+  if (!result) {
+    throw new Error("Empty response");
+  }
+  if (options.errorExtractor(result)) {
+    throw new Error(options.errorExtractor(result));
+  }
+  try {
+    onResult?.(result);
+    return options.fullContentExtractor(result);
+  } catch (e) {
+    console.error(e);
+    throw Error(JSON.stringify(result));
+  }
+}
+
+// src/utils/cache.js
+var Cache = class {
+  constructor() {
+    this.maxItems = 10;
+    this.maxAge = 1e3 * 60 * 60;
+    this.cache = {};
+  }
+  set(key, value) {
+    this.trim();
+    this.cache[key] = {
+      value,
+      time: Date.now()
+    };
+  }
+  get(key) {
+    this.trim();
+    return this.cache[key]?.value;
+  }
+  trim() {
+    let keys = Object.keys(this.cache);
+    for (const key of keys) {
+      if (Date.now() - this.cache[key].time > this.maxAge) {
+        delete this.cache[key];
+      }
+    }
+    keys = Object.keys(this.cache);
+    if (keys.length > this.maxItems) {
+      keys.sort((a, b) => this.cache[a].time - this.cache[b].time);
+      for (let i = 0; i < keys.length - this.maxItems; i++) {
+        delete this.cache[keys[i]];
+      }
+    }
+  }
+};
+
+// src/utils/image.js
+var IMAGE_CACHE = new Cache();
+async function fetchImage(url) {
+  if (IMAGE_CACHE[url]) {
+    return IMAGE_CACHE.get(url);
+  }
+  return fetch(url).then((resp) => resp.arrayBuffer()).then((blob) => {
+    IMAGE_CACHE.set(url, blob);
+    return blob;
+  });
+}
+async function uploadImageToTelegraph(url) {
+  if (url.startsWith("https://telegra.ph")) {
+    return url;
+  }
+  const raw = await fetch(url).then((resp2) => resp2.arrayBuffer());
+  const formData = new FormData();
+  formData.append("file", new Blob([raw]), "blob");
+  const resp = await fetch("https://telegra.ph/upload", {
+    method: "POST",
+    body: formData
+  });
+  let [{ src }] = await resp.json();
+  src = `https://telegra.ph${src}`;
+  IMAGE_CACHE.set(url, raw);
+  return src;
+}
+async function urlToBase64String(url) {
+  try {
+    const { Buffer: Buffer2 } = await import("node:buffer");
+    return fetchImage(url).then((buffer) => Buffer2.from(buffer).toString("base64"));
+  } catch {
+    return fetchImage(url).then((buffer) => btoa(String.fromCharCode.apply(null, new Uint8Array(buffer))));
+  }
+}
+function getImageFormatFromBase64(base64String) {
+  const firstChar = base64String.charAt(0);
+  switch (firstChar) {
+    case "/":
+      return "jpeg";
+    case "i":
+      return "png";
+    case "R":
+      return "gif";
+    case "U":
+      return "webp";
+    default:
+      throw new Error("Unsupported image format");
+  }
+}
+async function imageToBase64String(url) {
+  const base64String = await urlToBase64String(url);
+  const format = getImageFormatFromBase64(base64String);
+  return {
+    data: base64String,
+    format: `image/${format}`
+  };
+}
+function renderBase64DataURI(params) {
+  return `data:${params.format};base64,${params.data}`;
+}
+
+// src/agent/openai.js
+function openAIKeyFromContext(context) {
+  const length = context.USER_CONFIG.OPENAI_API_KEY.length;
+  return context.USER_CONFIG.OPENAI_API_KEY[Math.floor(Math.random() * length)];
+}
+function isOpenAIEnable(context) {
+  return context.USER_CONFIG.OPENAI_API_KEY.length > 0;
+}
+async function renderOpenAIMessage(item) {
+  const res = {
+    role: item.role,
+    content: item.content
+  };
+  if (item.images && item.images.length > 0) {
+    res.content = [];
+    if (item.content) {
+      res.content.push({ type: "text", text: item.content });
+    }
+    for (const image of item.images) {
+      switch (ENV.TELEGRAM_IMAGE_TRANSFER_MODE) {
+        case "base64":
+          res.content.push({ type: "image_url", url: renderBase64DataURI(await imageToBase64String(image)) });
+          break;
+        case "url":
+        default:
+          res.content.push({ type: "image_url", image_url: { url: image } });
+          break;
+      }
+    }
+  }
+  return res;
+}
+async function requestCompletionsFromOpenAI(params, context, onStream) {
+  const { message, images, prompt, history } = params;
+  const url = `${context.USER_CONFIG.OPENAI_API_BASE}/chat/completions`;
+  const header = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${openAIKeyFromContext(context)}`
+  };
+  const messages = [...history || [], { role: "user", content: message, images }];
+  if (prompt) {
+    messages.unshift({ role: context.USER_CONFIG.SYSTEM_INIT_MESSAGE_ROLE, content: prompt });
+  }
+  const body = {
+    model: context.USER_CONFIG.OPENAI_CHAT_MODEL,
+    ...context.USER_CONFIG.OPENAI_API_EXTRA_PARAMS,
+    messages: await Promise.all(messages.map(renderOpenAIMessage)),
+    stream: onStream != null
+  };
+  return requestChatCompletions(url, header, body, context, onStream);
+}
+async function requestImageFromOpenAI(prompt, context) {
+  const url = `${context.USER_CONFIG.OPENAI_API_BASE}/images/generations`;
+  const header = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${openAIKeyFromContext(context)}`
+  };
+  const body = {
+    prompt,
+    n: 1,
+    size: context.USER_CONFIG.DALL_E_IMAGE_SIZE,
+    model: context.USER_CONFIG.DALL_E_MODEL
+  };
+  if (body.model === "dall-e-3") {
+    body.quality = context.USER_CONFIG.DALL_E_IMAGE_QUALITY;
+    body.style = context.USER_CONFIG.DALL_E_IMAGE_STYLE;
+  }
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: header,
+    body: JSON.stringify(body)
+  }).then((res) => res.json());
+  if (resp.error?.message) {
+    throw new Error(resp.error.message);
+  }
+  return resp?.data?.[0]?.url;
+}
+
+// src/agent/workersai.js
+async function run(model, body, id, token) {
+  return await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${id}/ai/run/${model}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      method: "POST",
+      body: JSON.stringify(body)
+    }
+  );
+}
+function isWorkersAIEnable(context) {
+  return !!(context.USER_CONFIG.CLOUDFLARE_ACCOUNT_ID && context.USER_CONFIG.CLOUDFLARE_TOKEN);
+}
+function renderWorkerAIMessage(item) {
+  return {
+    role: item.role,
+    content: item.content
+  };
+}
+async function requestCompletionsFromWorkersAI(params, context, onStream) {
+  const { message, prompt, history } = params;
+  const id = context.USER_CONFIG.CLOUDFLARE_ACCOUNT_ID;
+  const token = context.USER_CONFIG.CLOUDFLARE_TOKEN;
+  const model = context.USER_CONFIG.WORKERS_CHAT_MODEL;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${id}/ai/run/${model}`;
+  const header = {
+    Authorization: `Bearer ${token}`
+  };
+  const messages = [...history || [], { role: "user", content: message }];
+  if (prompt) {
+    messages.unshift({ role: context.USER_CONFIG.SYSTEM_INIT_MESSAGE_ROLE, content: prompt });
+  }
+  const body = {
+    messages: messages.map(renderWorkerAIMessage),
+    stream: onStream !== null
+  };
+  const options = {};
+  options.contentExtractor = function(data) {
+    return data?.response;
+  };
+  options.fullContentExtractor = function(data) {
+    return data?.result?.response;
+  };
+  options.errorExtractor = function(data) {
+    return data?.errors?.[0]?.message;
+  };
+  return requestChatCompletions(url, header, body, context, onStream, null, options);
+}
+async function requestImageFromWorkersAI(prompt, context) {
+  const id = context.USER_CONFIG.CLOUDFLARE_ACCOUNT_ID;
+  const token = context.USER_CONFIG.CLOUDFLARE_TOKEN;
+  const raw = await run(context.USER_CONFIG.WORKERS_IMAGE_MODEL, { prompt }, id, token);
+  return await raw.blob();
+}
+
+// src/agent/gemini.js
+function isGeminiAIEnable(context) {
+  return !!context.USER_CONFIG.GOOGLE_API_KEY;
+}
+var GEMINI_ROLE_MAP = {
+  "assistant": "model",
+  "system": "user",
+  "user": "user"
+};
+function renderGeminiMessage(item) {
+  return {
+    role: GEMINI_ROLE_MAP[item.role],
+    parts: [
+      {
+        "text": item.content || ""
+      }
+    ]
+  };
+}
+async function requestCompletionsFromGeminiAI(params, context, onStream) {
+  const { message, prompt, history } = params;
+  onStream = null;
+  const url = `${context.USER_CONFIG.GOOGLE_COMPLETIONS_API}${context.USER_CONFIG.GOOGLE_COMPLETIONS_MODEL}:${onStream ? "streamGenerateContent" : "generateContent"}?key=${context.USER_CONFIG.GOOGLE_API_KEY}`;
+  const contentsTemp = [...history || [], { role: "user", content: message }];
+  if (prompt) {
+    contentsTemp.unshift({ role: "assistant", content: prompt });
+  }
+  const contents = [];
+  for (const msg of contentsTemp) {
+    msg.role = GEMINI_ROLE_MAP[msg.role];
+    if (contents.length === 0 || contents[contents.length - 1].role !== msg.role) {
+      contents.push(renderGeminiMessage(msg));
+    } else {
+      contents[contents.length - 1].parts[0].text += msg.content;
+    }
+  }
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ contents })
+  });
+  const data = await resp.json();
+  try {
+    return data.candidates[0].content.parts[0].text;
+  } catch (e) {
+    console.error(e);
+    if (!data) {
+      throw new Error("Empty response");
+    }
+    throw new Error(data?.error?.message || JSON.stringify(data));
+  }
+}
+
+// src/agent/mistralai.js
+function isMistralAIEnable(context) {
+  return !!context.USER_CONFIG.MISTRAL_API_KEY;
+}
+function renderMistralMessage(item) {
+  return {
+    role: item.role,
+    content: item.content
+  };
+}
+async function requestCompletionsFromMistralAI(params, context, onStream) {
+  const { message, prompt, history } = params;
+  const url = `${context.USER_CONFIG.MISTRAL_API_BASE}/chat/completions`;
+  const header = {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${context.USER_CONFIG.MISTRAL_API_KEY}`
+  };
+  const messages = [...history || [], { role: "user", content: message }];
+  if (prompt) {
+    messages.unshift({ role: context.USER_CONFIG.SYSTEM_INIT_MESSAGE_ROLE, content: prompt });
+  }
+  const body = {
+    model: context.USER_CONFIG.MISTRAL_CHAT_MODEL,
+    messages: messages.map(renderMistralMessage),
+    stream: onStream != null
+  };
+  return requestChatCompletions(url, header, body, context, onStream);
+}
+
+// src/agent/cohere.js
+function isCohereAIEnable(context) {
+  return !!context.USER_CONFIG.COHERE_API_KEY;
+}
+var COHERE_ROLE_MAP = {
+  "assistant": "CHATBOT",
+  "user": "USER"
+};
+function renderCohereMessage(item) {
+  return {
+    role: COHERE_ROLE_MAP[item.role],
+    content: item.content
+  };
+}
+async function requestCompletionsFromCohereAI(params, context, onStream) {
+  const { message, prompt, history } = params;
+  const url = `${context.USER_CONFIG.COHERE_API_BASE}/chat`;
+  const header = {
+    "Authorization": `Bearer ${context.USER_CONFIG.COHERE_API_KEY}`,
+    "Content-Type": "application/json",
+    "Accept": onStream !== null ? "text/event-stream" : "application/json"
+  };
+  const body = {
+    message,
+    model: context.USER_CONFIG.COHERE_CHAT_MODEL,
+    stream: onStream != null,
+    preamble: prompt,
+    chat_history: history.map(renderCohereMessage)
+  };
+  if (!body.preamble) {
+    delete body.preamble;
+  }
+  const options = {};
+  options.streamBuilder = function(r, c) {
+    return new Stream(r, c, null, cohereSseJsonParser);
+  };
+  options.contentExtractor = function(data) {
+    return data?.text;
+  };
+  options.fullContentExtractor = function(data) {
+    return data?.text;
+  };
+  options.errorExtractor = function(data) {
+    return data?.message;
+  };
+  return requestChatCompletions(url, header, body, context, onStream, null, options);
+}
+
+// src/agent/anthropic.js
+function isAnthropicAIEnable(context) {
+  return !!context.USER_CONFIG.ANTHROPIC_API_KEY;
+}
+async function renderAnthropicMessage(item) {
+  const res = {
+    role: item.role,
+    content: item.content
+  };
+  if (item.images && item.images.length > 0) {
+    res.content = [];
+    if (item.content) {
+      res.content.push({ type: "text", text: item.content });
+    }
+    for (const image of item.images) {
+      res.content.push(await imageToBase64String(image).then(({ format, data }) => {
+        return { type: "image", source: { type: "base64", media_type: format, data } };
+      }));
+    }
+  }
+  return res;
+}
+async function requestCompletionsFromAnthropicAI(params, context, onStream) {
+  const { message, images, prompt, history } = params;
+  const url = `${context.USER_CONFIG.ANTHROPIC_API_BASE}/messages`;
+  const header = {
+    "x-api-key": context.USER_CONFIG.ANTHROPIC_API_KEY,
+    "anthropic-version": "2023-06-01",
+    "content-type": "application/json"
+  };
+  const messages = [...history || [], { role: "user", content: message, images }];
+  const body = {
+    system: prompt,
+    model: context.USER_CONFIG.ANTHROPIC_CHAT_MODEL,
+    messages: await Promise.all(messages.map(renderAnthropicMessage)),
+    stream: onStream != null
+  };
+  if (!body.system) {
+    delete body.system;
+  }
+  const options = {};
+  options.streamBuilder = function(r, c) {
+    return new Stream(r, c, null, anthropicSseJsonParser);
+  };
+  options.contentExtractor = function(data) {
+    return data?.delta?.text;
+  };
+  options.fullContentExtractor = function(data) {
+    return data?.content?.[0].text;
+  };
+  options.errorExtractor = function(data) {
+    return data?.error?.message;
+  };
+  return requestChatCompletions(url, header, body, context, onStream, null, options);
+}
+
+// src/agent/azure.js
+function azureKeyFromContext(context) {
+  return context.USER_CONFIG.AZURE_API_KEY;
+}
+function isAzureEnable(context) {
+  return !!(context.USER_CONFIG.AZURE_API_KEY && context.USER_CONFIG.AZURE_COMPLETIONS_API);
+}
+function isAzureImageEnable(context) {
+  return !!(context.USER_CONFIG.AZURE_API_KEY && context.USER_CONFIG.AZURE_DALLE_API);
+}
+async function requestCompletionsFromAzureOpenAI(params, context, onStream) {
+  const { message, images, prompt, history } = params;
+  const url = context.USER_CONFIG.AZURE_COMPLETIONS_API;
+  const header = {
+    "Content-Type": "application/json",
+    "api-key": azureKeyFromContext(context)
+  };
+  const messages = [...history || [], { role: "user", content: message, images }];
+  if (prompt) {
+    messages.unshift({ role: context.USER_CONFIG.SYSTEM_INIT_MESSAGE_ROLE, content: prompt });
+  }
+  const body = {
+    ...context.USER_CONFIG.OPENAI_API_EXTRA_PARAMS,
+    messages: await Promise.all(messages.map(renderOpenAIMessage)),
+    stream: onStream != null
+  };
+  return requestChatCompletions(url, header, body, context, onStream);
+}
+async function requestImageFromAzureOpenAI(prompt, context) {
+  const url = context.USER_CONFIG.AZURE_DALLE_API;
+  const header = {
+    "Content-Type": "application/json",
+    "api-key": azureKeyFromContext(context)
+  };
+  const body = {
+    prompt,
+    n: 1,
+    size: context.USER_CONFIG.DALL_E_IMAGE_SIZE,
+    style: context.USER_CONFIG.DALL_E_IMAGE_STYLE,
+    quality: context.USER_CONFIG.DALL_E_IMAGE_QUALITY
+  };
+  const validSize = ["1792x1024", "1024x1024", "1024x1792"];
+  if (!validSize.includes(body.size)) {
+    body.size = "1024x1024";
+  }
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: header,
+    body: JSON.stringify(body)
+  }).then((res) => res.json());
+  if (resp.error?.message) {
+    throw new Error(resp.error.message);
+  }
+  return resp?.data?.[0]?.url;
+}
+
+// src/agent/agents.js
+var chatLlmAgents = [
+  {
+    name: "azure",
+    enable: isAzureEnable,
+    request: requestCompletionsFromAzureOpenAI
+  },
+  {
+    name: "openai",
+    enable: isOpenAIEnable,
+    request: requestCompletionsFromOpenAI
+  },
+  {
+    name: "workers",
+    enable: isWorkersAIEnable,
+    request: requestCompletionsFromWorkersAI
+  },
+  {
+    name: "gemini",
+    enable: isGeminiAIEnable,
+    request: requestCompletionsFromGeminiAI
+  },
+  {
+    name: "mistral",
+    enable: isMistralAIEnable,
+    request: requestCompletionsFromMistralAI
+  },
+  {
+    name: "cohere",
+    enable: isCohereAIEnable,
+    request: requestCompletionsFromCohereAI
+  },
+  {
+    name: "anthropic",
+    enable: isAnthropicAIEnable,
+    request: requestCompletionsFromAnthropicAI
+  }
+];
+function currentChatModel(agentName, context) {
+  switch (agentName) {
+    case "azure":
+      try {
+        const url = new URL(context.USER_CONFIG.AZURE_COMPLETIONS_API);
+        return url.pathname.split("/")[3];
+      } catch {
+        return context.USER_CONFIG.AZURE_COMPLETIONS_API;
+      }
+    case "openai":
+      return context.USER_CONFIG.OPENAI_CHAT_MODEL;
+    case "workers":
+      return context.USER_CONFIG.WORKERS_CHAT_MODEL;
+    case "gemini":
+      return context.USER_CONFIG.GOOGLE_COMPLETIONS_MODEL;
+    case "mistral":
+      return context.USER_CONFIG.MISTRAL_CHAT_MODEL;
+    case "cohere":
+      return context.USER_CONFIG.COHERE_CHAT_MODEL;
+    case "anthropic":
+      return context.USER_CONFIG.ANTHROPIC_CHAT_MODEL;
+    default:
+      return null;
+  }
+}
+function chatModelKey(agentName) {
+  switch (agentName) {
+    case "azure":
+      return "AZURE_COMPLETIONS_API";
+    case "openai":
+      return "OPENAI_CHAT_MODEL";
+    case "workers":
+      return "WORKERS_CHAT_MODEL";
+    case "gemini":
+      return "GOOGLE_COMPLETIONS_MODEL";
+    case "mistral":
+      return "MISTRAL_CHAT_MODEL";
+    case "cohere":
+      return "COHERE_CHAT_MODEL";
+    case "anthropic":
+      return "ANTHROPIC_CHAT_MODEL";
+    default:
+      return null;
+  }
+}
+function loadChatLLM(context) {
+  for (const llm of chatLlmAgents) {
+    if (llm.name === context.USER_CONFIG.AI_PROVIDER) {
+      return llm;
+    }
+  }
+  for (const llm of chatLlmAgents) {
+    if (llm.enable(context)) {
+      return llm;
+    }
+  }
+  return null;
+}
+var imageGenAgents = [
+  {
+    name: "azure",
+    enable: isAzureImageEnable,
+    request: requestImageFromAzureOpenAI
+  },
+  {
+    name: "openai",
+    enable: isOpenAIEnable,
+    request: requestImageFromOpenAI
+  },
+  {
+    name: "workers",
+    enable: isWorkersAIEnable,
+    request: requestImageFromWorkersAI
+  }
+];
+function loadImageGen(context) {
+  for (const imgGen of imageGenAgents) {
+    if (imgGen.name === context.USER_CONFIG.AI_IMAGE_PROVIDER) {
+      return imgGen;
+    }
+  }
+  for (const imgGen of imageGenAgents) {
+    if (imgGen.enable(context)) {
+      return imgGen;
+    }
+  }
+  return null;
+}
+function currentImageModel(agentName, context) {
+  switch (agentName) {
+    case "azure":
+      try {
+        const url = new URL(context.USER_CONFIG.AZURE_DALLE_API);
+        return url.pathname.split("/")[3];
+      } catch {
+        return context.USER_CONFIG.AZURE_DALLE_API;
+      }
+    case "openai":
+      return context.USER_CONFIG.DALL_E_MODEL;
+    case "workers":
+      return context.USER_CONFIG.WORKERS_IMAGE_MODEL;
+    default:
+      return null;
+  }
+}
+function imageModelKey(agentName) {
+  switch (agentName) {
+    case "azure":
+      return "AZURE_DALLE_API";
+    case "openai":
+      return "DALL_E_MODEL";
+    case "workers":
+      return "WORKERS_IMAGE_MODEL";
+    default:
+      return null;
+  }
+}
+
+// src/agent/llm.js
+function tokensCounter() {
+  return (text) => {
+    return text.length;
+  };
+}
+async function loadHistory(key) {
+  let history = [];
+  try {
+    history = JSON.parse(await DATABASE.get(key));
+  } catch (e) {
+    console.error(e);
+  }
+  if (!history || !Array.isArray(history)) {
+    history = [];
+  }
+  const counter = tokensCounter();
+  const trimHistory = (list, initLength, maxLength, maxToken) => {
+    if (maxLength >= 0 && list.length > maxLength) {
+      list = list.splice(list.length - maxLength);
+    }
+    if (maxToken > 0) {
+      let tokenLength = initLength;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const historyItem = list[i];
+        let length = 0;
+        if (historyItem.content) {
+          length = counter(historyItem.content);
+        } else {
+          historyItem.content = "";
+        }
+        tokenLength += length;
+        if (tokenLength > maxToken) {
+          list = list.splice(i + 1);
           break;
         }
-        new_word = new_word.concat(word.slice(i, j));
-        i = j;
-        if (word[i] === first && i < word.length - 1 && word[i + 1] === second) {
-          new_word.push(first + second);
-          i = i + 2;
-        } else {
-          new_word.push(word[i]);
-          i = i + 1;
-        }
-      }
-      word = new_word;
-      if (word.length === 1) {
-        break;
-      } else {
-        pairs = get_pairs(word);
       }
     }
-    word = word.join(" ");
-    cache.set(token, word);
-    return word;
-  }
-  return function tokenCount(text) {
-    let tokensCount = 0;
-    const matches = Array.from(text.matchAll(pat)).map((x) => x[0]);
-    for (let token of matches) {
-      token = encodeStr(token).map((x) => {
-        return byte_encoder[x];
-      }).join("");
-      const new_tokens = bpe(token).split(" ").map((x) => encoder[x]);
-      tokensCount += new_tokens.length;
-    }
-    return tokensCount;
+    return list;
   };
+  if (ENV.AUTO_TRIM_HISTORY && ENV.MAX_HISTORY_LENGTH > 0) {
+    history = trimHistory(history, 0, ENV.MAX_HISTORY_LENGTH, ENV.MAX_TOKEN_LENGTH);
+  }
+  return history;
+}
+async function requestCompletionsFromLLM(params, context, llm, modifier, onStream) {
+  const historyDisable = ENV.AUTO_TRIM_HISTORY && ENV.MAX_HISTORY_LENGTH <= 0;
+  const historyKey = context.SHARE_CONTEXT.chatHistoryKey;
+  const { message, images } = params;
+  let history = await loadHistory(historyKey);
+  if (modifier) {
+    const modifierData = modifier(history, message);
+    history = modifierData.history;
+    params.message = modifierData.message;
+  }
+  const llmParams = {
+    ...params,
+    history,
+    prompt: context.USER_CONFIG.SYSTEM_INIT_MESSAGE
+  };
+  const answer = await llm(llmParams, context, onStream);
+  if (!historyDisable) {
+    history.push({ role: "user", content: message || "", images });
+    history.push({ role: "assistant", content: answer });
+    await DATABASE.put(historyKey, JSON.stringify(history)).catch(console.error);
+  }
+  return answer;
+}
+async function chatWithLLM(params, context, modifier) {
+  try {
+    try {
+      const msg = await sendMessageToTelegramWithContext(context)("...").then((r) => r.json());
+      context.CURRENT_CHAT_CONTEXT.message_id = msg.result.message_id;
+      context.CURRENT_CHAT_CONTEXT.reply_markup = null;
+    } catch (e) {
+      console.error(e);
+    }
+    setTimeout(() => sendChatActionToTelegramWithContext(context)("typing").catch(console.error), 0);
+    let onStream = null;
+    const parseMode = context.CURRENT_CHAT_CONTEXT.parse_mode;
+    let nextEnableTime = null;
+    if (ENV.STREAM_MODE) {
+      context.CURRENT_CHAT_CONTEXT.parse_mode = null;
+      onStream = async (text) => {
+        try {
+          if (nextEnableTime && nextEnableTime > Date.now()) {
+            return;
+          }
+          const resp = await sendMessageToTelegramWithContext(context)(text);
+          if (resp.status === 429) {
+            const retryAfter = parseInt(resp.headers.get("Retry-After"));
+            if (retryAfter) {
+              nextEnableTime = Date.now() + retryAfter * 1e3;
+              return;
+            }
+          }
+          nextEnableTime = null;
+          if (resp.ok) {
+            context.CURRENT_CHAT_CONTEXT.message_id = (await resp.json()).result.message_id;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+    }
+    const llm = loadChatLLM(context)?.request;
+    if (llm === null) {
+      return sendMessageToTelegramWithContext(context)(`LLM is not enable`);
+    }
+    const answer = await requestCompletionsFromLLM(params, context, llm, modifier, onStream);
+    context.CURRENT_CHAT_CONTEXT.parse_mode = parseMode;
+    if (ENV.SHOW_REPLY_BUTTON && context.CURRENT_CHAT_CONTEXT.message_id) {
+      try {
+        await deleteMessageFromTelegramWithContext(context)(context.CURRENT_CHAT_CONTEXT.message_id);
+        context.CURRENT_CHAT_CONTEXT.message_id = null;
+        context.CURRENT_CHAT_CONTEXT.reply_markup = {
+          keyboard: [[{ text: "/new" }, { text: "/redo" }]],
+          selective: true,
+          resize_keyboard: true,
+          one_time_keyboard: true
+        };
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    if (nextEnableTime && nextEnableTime > Date.now()) {
+      await new Promise((resolve) => setTimeout(resolve, nextEnableTime - Date.now()));
+    }
+    return sendMessageToTelegramWithContext(context)(answer);
+  } catch (e) {
+    let errMsg = `Error: ${e.message}`;
+    if (errMsg.length > 2048) {
+      errMsg = errMsg.substring(0, 2048);
+    }
+    context.CURRENT_CHAT_CONTEXT.disable_web_page_preview = true;
+    return sendMessageToTelegramWithContext(context)(errMsg);
+  }
 }
 
-// src/utils.js
-function randomString(length) {
-  const chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  let result = "";
-  for (let i = length; i > 0; --i)
-    result += chars[Math.floor(Math.random() * chars.length)];
-  return result;
-}
-async function historyPassword() {
-  let password = await DATABASE.get(CONST.PASSWORD_KEY);
-  if (password === null) {
-    password = randomString(32);
-    await DATABASE.put(CONST.PASSWORD_KEY, password);
+// src/telegram/command.js
+var commandAuthCheck = {
+  default: function(chatType) {
+    if (CONST.GROUP_TYPES.includes(chatType)) {
+      return ["administrator", "creator"];
+    }
+    return false;
+  },
+  shareModeGroup: function(chatType) {
+    if (CONST.GROUP_TYPES.includes(chatType)) {
+      if (!ENV.GROUP_CHAT_BOT_SHARE_MODE) {
+        return false;
+      }
+      return ["administrator", "creator"];
+    }
+    return false;
   }
-  return password;
+};
+var commandSortList = [
+  "/new",
+  "/redo",
+  "/img",
+  "/setenv",
+  "/delenv",
+  "/version",
+  "/system",
+  "/help"
+];
+var commandHandlers = {
+  "/help": {
+    scopes: ["all_private_chats", "all_chat_administrators"],
+    fn: commandGetHelp
+  },
+  "/new": {
+    scopes: ["all_private_chats", "all_group_chats", "all_chat_administrators"],
+    fn: commandCreateNewChatContext,
+    needAuth: commandAuthCheck.shareModeGroup
+  },
+  "/start": {
+    scopes: [],
+    fn: commandCreateNewChatContext,
+    needAuth: commandAuthCheck.default
+  },
+  "/img": {
+    scopes: ["all_private_chats", "all_chat_administrators"],
+    fn: commandGenerateImg,
+    needAuth: commandAuthCheck.shareModeGroup
+  },
+  "/version": {
+    scopes: ["all_private_chats", "all_chat_administrators"],
+    fn: commandFetchUpdate,
+    needAuth: commandAuthCheck.default
+  },
+  "/setenv": {
+    scopes: [],
+    fn: commandUpdateUserConfig,
+    needAuth: commandAuthCheck.shareModeGroup
+  },
+  "/setenvs": {
+    scopes: [],
+    fn: commandUpdateUserConfigs,
+    needAuth: commandAuthCheck.shareModeGroup
+  },
+  "/delenv": {
+    scopes: [],
+    fn: commandDeleteUserConfig,
+    needAuth: commandAuthCheck.shareModeGroup
+  },
+  "/clearenv": {
+    scopes: [],
+    fn: commandClearUserConfig,
+    needAuth: commandAuthCheck.shareModeGroup
+  },
+  "/system": {
+    scopes: ["all_private_chats", "all_chat_administrators"],
+    fn: commandSystem,
+    needAuth: commandAuthCheck.default
+  },
+  "/redo": {
+    scopes: ["all_private_chats", "all_group_chats", "all_chat_administrators"],
+    fn: commandRegenerate,
+    needAuth: commandAuthCheck.shareModeGroup
+  }
+};
+async function commandGenerateImg(message, command, subcommand, context) {
+  if (subcommand === "") {
+    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.help.img);
+  }
+  try {
+    const gen = loadImageGen(context)?.request;
+    if (!gen) {
+      return sendMessageToTelegramWithContext(context)(`ERROR: Image generator not found`);
+    }
+    setTimeout(() => sendChatActionToTelegramWithContext(context)("upload_photo").catch(console.error), 0);
+    const img = await gen(subcommand, context);
+    return sendPhotoToTelegramWithContext(context)(img);
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
 }
+async function commandGetHelp(message, command, subcommand, context) {
+  let helpMsg = ENV.I18N.command.help.summary + "\n";
+  helpMsg += Object.keys(commandHandlers).map((key) => `${key}\uFF1A${ENV.I18N.command.help[key.substring(1)]}`).join("\n");
+  helpMsg += Object.keys(CUSTOM_COMMAND).filter((key) => !!CUSTOM_COMMAND_DESCRIPTION[key]).map((key) => `${key}\uFF1A${CUSTOM_COMMAND_DESCRIPTION[key]}`).join("\n");
+  return sendMessageToTelegramWithContext(context)(helpMsg);
+}
+async function commandCreateNewChatContext(message, command, subcommand, context) {
+  try {
+    await DATABASE.delete(context.SHARE_CONTEXT.chatHistoryKey);
+    context.CURRENT_CHAT_CONTEXT.reply_markup = JSON.stringify({
+      remove_keyboard: true,
+      selective: true
+    });
+    if (command === "/new") {
+      return sendMessageToTelegramWithContext(context)(ENV.I18N.command.new.new_chat_start);
+    } else {
+      return sendMessageToTelegramWithContext(context)(`${ENV.I18N.command.new.new_chat_start}(${context.CURRENT_CHAT_CONTEXT.chat_id})`);
+    }
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
+}
+async function commandUpdateUserConfig(message, command, subcommand, context) {
+  const kv = subcommand.indexOf("=");
+  if (kv === -1) {
+    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.help.setenv);
+  }
+  let key = subcommand.slice(0, kv);
+  const value = subcommand.slice(kv + 1);
+  key = ENV_KEY_MAPPER[key] || key;
+  if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
+    return sendMessageToTelegramWithContext(context)(`Key ${key} is locked`);
+  }
+  if (!Object.keys(context.USER_CONFIG).includes(key)) {
+    return sendMessageToTelegramWithContext(context)(`Key ${key} not found`);
+  }
+  try {
+    context.USER_CONFIG.DEFINE_KEYS.push(key);
+    context.USER_CONFIG.DEFINE_KEYS = Array.from(new Set(context.USER_CONFIG.DEFINE_KEYS));
+    mergeEnvironment(context.USER_CONFIG, {
+      [key]: value
+    });
+    console.log("Update user config: ", key, context.USER_CONFIG[key]);
+    await DATABASE.put(
+      context.SHARE_CONTEXT.configStoreKey,
+      JSON.stringify(trimUserConfig(context.USER_CONFIG))
+    );
+    return sendMessageToTelegramWithContext(context)("Update user config success");
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
+}
+async function commandUpdateUserConfigs(message, command, subcommand, context) {
+  try {
+    const values = JSON.parse(subcommand);
+    const configKeys = Object.keys(context.USER_CONFIG);
+    for (const ent of Object.entries(values)) {
+      let [key, value] = ent;
+      key = ENV_KEY_MAPPER[key] || key;
+      if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
+        return sendMessageToTelegramWithContext(context)(`Key ${key} is locked`);
+      }
+      if (!configKeys.includes(key)) {
+        return sendMessageToTelegramWithContext(context)(`Key ${key} not found`);
+      }
+      context.USER_CONFIG.DEFINE_KEYS.push(key);
+      mergeEnvironment(context.USER_CONFIG, {
+        [key]: value
+      });
+      console.log("Update user config: ", key, context.USER_CONFIG[key]);
+    }
+    context.USER_CONFIG.DEFINE_KEYS = Array.from(new Set(context.USER_CONFIG.DEFINE_KEYS));
+    await DATABASE.put(
+      context.SHARE_CONTEXT.configStoreKey,
+      JSON.stringify(trimUserConfig(trimUserConfig(context.USER_CONFIG)))
+    );
+    return sendMessageToTelegramWithContext(context)("Update user config success");
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
+}
+async function commandDeleteUserConfig(message, command, subcommand, context) {
+  if (ENV.LOCK_USER_CONFIG_KEYS.includes(subcommand)) {
+    const msg = `Key ${subcommand} is locked`;
+    return sendMessageToTelegramWithContext(context)(msg);
+  }
+  try {
+    context.USER_CONFIG[subcommand] = null;
+    context.USER_CONFIG.DEFINE_KEYS = context.USER_CONFIG.DEFINE_KEYS.filter((key) => key !== subcommand);
+    await DATABASE.put(
+      context.SHARE_CONTEXT.configStoreKey,
+      JSON.stringify(trimUserConfig(context.USER_CONFIG))
+    );
+    return sendMessageToTelegramWithContext(context)("Delete user config success");
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
+}
+async function commandClearUserConfig(message, command, subcommand, context) {
+  try {
+    await DATABASE.put(
+      context.SHARE_CONTEXT.configStoreKey,
+      JSON.stringify({})
+    );
+    return sendMessageToTelegramWithContext(context)("Clear user config success");
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
+}
+async function commandFetchUpdate(message, command, subcommand, context) {
+  const current = {
+    ts: ENV.BUILD_TIMESTAMP,
+    sha: ENV.BUILD_VERSION
+  };
+  try {
+    const info = `https://raw.githubusercontent.com/TBXark/ChatGPT-Telegram-Workers/${ENV.UPDATE_BRANCH}/dist/buildinfo.json`;
+    const online = await fetch(info).then((r) => r.json());
+    const timeFormat = (ts) => {
+      return new Date(ts * 1e3).toLocaleString("en-US", {});
+    };
+    if (current.ts < online.ts) {
+      return sendMessageToTelegramWithContext(context)(`New version detected: ${online.sha}(${timeFormat(online.ts)})
+Current version: ${current.sha}(${timeFormat(current.ts)})`);
+    } else {
+      return sendMessageToTelegramWithContext(context)(`Current version: ${current.sha}(${timeFormat(current.ts)}) is up to date`);
+    }
+  } catch (e) {
+    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+  }
+}
+async function commandSystem(message, command, subcommand, context) {
+  let chatAgent = loadChatLLM(context)?.name;
+  let imageAgent = loadImageGen(context)?.name;
+  const agent = {
+    AI_PROVIDER: chatAgent,
+    AI_IMAGE_PROVIDER: imageAgent
+  };
+  if (chatModelKey(chatAgent)) {
+    agent[chatModelKey(chatAgent)] = currentChatModel(chatAgent, context);
+  }
+  if (imageModelKey(imageAgent)) {
+    agent[imageModelKey(imageAgent)] = currentImageModel(imageAgent, context);
+  }
+  let msg = `AGENT: ${JSON.stringify(agent, null, 2)}
+`;
+  if (ENV.DEV_MODE) {
+    const shareCtx = { ...context.SHARE_CONTEXT };
+    shareCtx.currentBotToken = "******";
+    context.USER_CONFIG.OPENAI_API_KEY = ["******"];
+    context.USER_CONFIG.AZURE_API_KEY = "******";
+    context.USER_CONFIG.AZURE_COMPLETIONS_API = "******";
+    context.USER_CONFIG.AZURE_DALLE_API = "******";
+    context.USER_CONFIG.CLOUDFLARE_ACCOUNT_ID = "******";
+    context.USER_CONFIG.CLOUDFLARE_TOKEN = "******";
+    context.USER_CONFIG.GOOGLE_API_KEY = "******";
+    context.USER_CONFIG.MISTRAL_API_KEY = "******";
+    context.USER_CONFIG.COHERE_API_KEY = "******";
+    context.USER_CONFIG.ANTHROPIC_API_KEY = "******";
+    const config = trimUserConfig(context.USER_CONFIG);
+    msg = "<pre>\n" + msg;
+    msg += `USER_CONFIG: ${JSON.stringify(config, null, 2)}
+`;
+    msg += `CHAT_CONTEXT: ${JSON.stringify(context.CURRENT_CHAT_CONTEXT, null, 2)}
+`;
+    msg += `SHARE_CONTEXT: ${JSON.stringify(shareCtx, null, 2)}
+`;
+    msg += "</pre>";
+  }
+  context.CURRENT_CHAT_CONTEXT.parse_mode = "HTML";
+  return sendMessageToTelegramWithContext(context)(msg);
+}
+async function commandRegenerate(message, command, subcommand, context) {
+  const mf = (history, text) => {
+    let nextText = text;
+    if (!(history && Array.isArray(history) && history.length > 0)) {
+      throw new Error("History not found");
+    }
+    const historyCopy = structuredClone(history);
+    while (true) {
+      const data = historyCopy.pop();
+      if (data === void 0 || data === null) {
+        break;
+      } else if (data.role === "user") {
+        if (text === "" || text === void 0 || text === null) {
+          nextText = data.content;
+        }
+        break;
+      }
+    }
+    if (subcommand) {
+      nextText = subcommand;
+    }
+    return { history: historyCopy, message: nextText };
+  };
+  return chatWithLLM({ message: null }, context, mf);
+}
+async function commandEcho(message, command, subcommand, context) {
+  let msg = "<pre>";
+  msg += JSON.stringify({ message }, null, 2);
+  msg += "</pre>";
+  context.CURRENT_CHAT_CONTEXT.parse_mode = "HTML";
+  return sendMessageToTelegramWithContext(context)(msg);
+}
+async function handleCommandMessage(message, context) {
+  if (ENV.DEV_MODE) {
+    commandHandlers["/echo"] = {
+      help: "[DEBUG ONLY] echo message",
+      scopes: ["all_private_chats", "all_chat_administrators"],
+      fn: commandEcho,
+      needAuth: commandAuthCheck.default
+    };
+  }
+  if (CUSTOM_COMMAND[message.text]) {
+    message.text = CUSTOM_COMMAND[message.text];
+  }
+  for (const key in commandHandlers) {
+    if (message.text === key || message.text.startsWith(key + " ")) {
+      const command = commandHandlers[key];
+      try {
+        if (command.needAuth) {
+          const roleList = command.needAuth(context.SHARE_CONTEXT.chatType);
+          if (roleList) {
+            const chatRole = await getChatRoleWithContext(context)(context.SHARE_CONTEXT.speakerId);
+            if (chatRole === null) {
+              return sendMessageToTelegramWithContext(context)("ERROR: Get chat role failed");
+            }
+            if (!roleList.includes(chatRole)) {
+              return sendMessageToTelegramWithContext(context)(`ERROR: Permission denied, need ${roleList.join(" or ")}`);
+            }
+          }
+        }
+      } catch (e) {
+        return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+      }
+      const subcommand = message.text.substring(key.length).trim();
+      try {
+        return await command.fn(message, key, subcommand, context);
+      } catch (e) {
+        return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
+      }
+    }
+  }
+  return null;
+}
+async function bindCommandForTelegram(token) {
+  const scopeCommandMap = {
+    all_private_chats: [],
+    all_group_chats: [],
+    all_chat_administrators: []
+  };
+  for (const key of commandSortList) {
+    if (ENV.HIDE_COMMAND_BUTTONS.includes(key)) {
+      continue;
+    }
+    if (Object.prototype.hasOwnProperty.call(commandHandlers, key) && commandHandlers[key].scopes) {
+      for (const scope of commandHandlers[key].scopes) {
+        if (!scopeCommandMap[scope]) {
+          scopeCommandMap[scope] = [];
+        }
+        scopeCommandMap[scope].push(key);
+      }
+    }
+  }
+  const result = {};
+  for (const scope in scopeCommandMap) {
+    result[scope] = await fetch(
+      `https://api.telegram.org/bot${token}/setMyCommands`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          commands: scopeCommandMap[scope].map((command) => ({
+            command,
+            description: ENV.I18N.command.help[command.substring(1)] || ""
+          })),
+          scope: {
+            type: scope
+          }
+        })
+      }
+    ).then((res) => res.json());
+  }
+  return { ok: true, result };
+}
+function commandsDocument() {
+  return Object.keys(commandHandlers).map((key) => {
+    return {
+      command: key,
+      description: ENV.I18N.command.help[key.substring(1)]
+    };
+  });
+}
+
+// src/utils/utils.js
 function renderHTML(body) {
   return `
 <html>  
@@ -845,69 +2273,6 @@ function errorToString(e) {
     stack: e.stack
   });
 }
-function mergeConfig(config, key, value) {
-  const type = typeof config[key];
-  switch (type) {
-    case "number":
-      config[key] = parseInt(value, 10);
-      break;
-    case "boolean":
-      config[key] = value === "true";
-      break;
-    case "string":
-      config[key] = value;
-      break;
-    case "object":
-      const object = JSON.parse(value);
-      if (typeof object === "object") {
-        config[key] = object;
-        break;
-      }
-      throw new Error(ENV.I18N.utils.not_supported_configuration);
-    default:
-      throw new Error(ENV.I18N.utils.not_supported_configuration);
-  }
-}
-async function tokensCounter() {
-  let counter = (text) => Array.from(text).length;
-  try {
-    if (ENV.GPT3_TOKENS_COUNT) {
-      const loader = async (key, url) => {
-        try {
-          const raw = await DATABASE.get(key);
-          if (raw && raw !== "") {
-            return raw;
-          }
-        } catch (e) {
-          console.error(e);
-        }
-        try {
-          const bpe = await fetch(url, {
-            headers: {
-              "User-Agent": CONST.USER_AGENT
-            }
-          }).then((x) => x.text());
-          await DATABASE.put(key, bpe);
-          return bpe;
-        } catch (e) {
-          console.error(e);
-        }
-        return null;
-      };
-      counter = await gpt3TokensCounter(ENV.GPT3_TOKENS_COUNT_REPO, loader);
-    }
-  } catch (e) {
-    console.error(e);
-  }
-  return (text) => {
-    try {
-      return counter(text);
-    } catch (e) {
-      console.error(e);
-      return Array.from(text).length;
-    }
-  };
-}
 async function makeResponse200(resp) {
   if (resp === null) {
     return new Response("NOT HANDLED", { status: 200 });
@@ -924,1170 +2289,10 @@ async function makeResponse200(resp) {
     });
   }
 }
-function isJsonResponse(resp) {
-  return resp.headers.get("content-type").indexOf("json") !== -1;
-}
-function isEventStreamResponse(resp) {
-  return resp.headers.get("content-type").indexOf("text/event-stream") !== -1;
-}
 
-// src/vendors/stream.js
-var Stream = class {
-  constructor(response, controller) {
-    this.response = response;
-    this.controller = controller;
-    this.decoder = new SSEDecoder();
-  }
-  async *iterMessages() {
-    if (!this.response.body) {
-      this.controller.abort();
-      throw new Error(`Attempted to iterate over a response with no body`);
-    }
-    const lineDecoder = new LineDecoder();
-    const iter = this.response.body;
-    for await (const chunk of iter) {
-      for (const line of lineDecoder.decode(chunk)) {
-        const sse = this.decoder.decode(line);
-        if (sse)
-          yield sse;
-      }
-    }
-    for (const line of lineDecoder.flush()) {
-      const sse = this.decoder.decode(line);
-      if (sse)
-        yield sse;
-    }
-  }
-  async *[Symbol.asyncIterator]() {
-    let done = false;
-    try {
-      for await (const sse of this.iterMessages()) {
-        if (done)
-          continue;
-        if (sse.data.startsWith("[DONE]")) {
-          done = true;
-          continue;
-        }
-        if (sse.event === null) {
-          try {
-            yield JSON.parse(sse.data);
-          } catch (e) {
-            console.error(`Could not parse message into JSON:`, sse.data);
-            console.error(`From chunk:`, sse.raw);
-            throw e;
-          }
-        }
-      }
-      done = true;
-    } catch (e) {
-      if (e instanceof Error && e.name === "AbortError")
-        return;
-      throw e;
-    } finally {
-      if (!done)
-        this.controller.abort();
-    }
-  }
-};
-var SSEDecoder = class {
-  constructor() {
-    this.event = null;
-    this.data = [];
-    this.chunks = [];
-  }
-  decode(line) {
-    if (line.endsWith("\r")) {
-      line = line.substring(0, line.length - 1);
-    }
-    if (!line) {
-      if (!this.event && !this.data.length)
-        return null;
-      const sse = {
-        event: this.event,
-        data: this.data.join("\n"),
-        raw: this.chunks
-      };
-      this.event = null;
-      this.data = [];
-      this.chunks = [];
-      return sse;
-    }
-    this.chunks.push(line);
-    if (line.startsWith(":")) {
-      return null;
-    }
-    let [fieldname, _, value] = partition(line, ":");
-    if (value.startsWith(" ")) {
-      value = value.substring(1);
-    }
-    if (fieldname === "event") {
-      this.event = value;
-    } else if (fieldname === "data") {
-      this.data.push(value);
-    }
-    return null;
-  }
-};
-var LineDecoder = class {
-  constructor() {
-    this.buffer = [];
-    this.trailingCR = false;
-  }
-  decode(chunk) {
-    let text = this.decodeText(chunk);
-    if (this.trailingCR) {
-      text = "\r" + text;
-      this.trailingCR = false;
-    }
-    if (text.endsWith("\r")) {
-      this.trailingCR = true;
-      text = text.slice(0, -1);
-    }
-    if (!text) {
-      return [];
-    }
-    const trailingNewline = LineDecoder.NEWLINE_CHARS.has(text[text.length - 1] || "");
-    let lines = text.split(LineDecoder.NEWLINE_REGEXP);
-    if (lines.length === 1 && !trailingNewline) {
-      this.buffer.push(lines[0]);
-      return [];
-    }
-    if (this.buffer.length > 0) {
-      lines = [this.buffer.join("") + lines[0], ...lines.slice(1)];
-      this.buffer = [];
-    }
-    if (!trailingNewline) {
-      this.buffer = [lines.pop() || ""];
-    }
-    return lines;
-  }
-  decodeText(bytes) {
-    var _a;
-    if (bytes == null)
-      return "";
-    if (typeof bytes === "string")
-      return bytes;
-    if (typeof Buffer !== "undefined") {
-      if (bytes instanceof Buffer) {
-        return bytes.toString();
-      }
-      if (bytes instanceof Uint8Array) {
-        return Buffer.from(bytes).toString();
-      }
-      throw new Error(`Unexpected: received non-Uint8Array (${bytes.constructor.name}) stream chunk in an environment with a global "Buffer" defined, which this library assumes to be Node. Please report this error.`);
-    }
-    if (typeof TextDecoder !== "undefined") {
-      if (bytes instanceof Uint8Array || bytes instanceof ArrayBuffer) {
-        (_a = this.textDecoder) !== null && _a !== void 0 ? _a : this.textDecoder = new TextDecoder("utf8");
-        return this.textDecoder.decode(bytes);
-      }
-      throw new Error(`Unexpected: received non-Uint8Array/ArrayBuffer (${bytes.constructor.name}) in a web platform. Please report this error.`);
-    }
-    throw new Error(`Unexpected: neither Buffer nor TextDecoder are available as globals. Please report this error.`);
-  }
-  flush() {
-    if (!this.buffer.length && !this.trailingCR) {
-      return [];
-    }
-    const lines = [this.buffer.join("")];
-    this.buffer = [];
-    this.trailingCR = false;
-    return lines;
-  }
-};
-LineDecoder.NEWLINE_CHARS = /* @__PURE__ */ new Set(["\n", "\r"]);
-LineDecoder.NEWLINE_REGEXP = /\r\n|[\n\r]/g;
-function partition(str, delimiter) {
-  const index = str.indexOf(delimiter);
-  if (index !== -1) {
-    return [str.substring(0, index), delimiter, str.substring(index + delimiter.length)];
-  }
-  return [str, "", ""];
-}
-
-// src/openai.js
-function openAIKeyFromContext(context) {
-  if (context.USER_CONFIG.OPENAI_API_KEY) {
-    return context.USER_CONFIG.OPENAI_API_KEY;
-  }
-  if (ENV.API_KEY.length === 0) {
-    return null;
-  }
-  return ENV.API_KEY[Math.floor(Math.random() * ENV.API_KEY.length)];
-}
-function azureKeyFromContext(context) {
-  return context.USER_CONFIG.AZURE_API_KEY || ENV.AZURE_API_KEY;
-}
-function isOpenAIEnable(context) {
-  return context.USER_CONFIG.OPENAI_API_KEY || ENV.API_KEY.length > 0;
-}
-function isAzureEnable(context) {
-  const key = context.USER_CONFIG.AZURE_API_KEY || ENV.AZURE_API_KEY;
-  return key !== null;
-}
-async function requestCompletionsFromOpenAI(message, history, context, onStream) {
-  const url = `${ENV.OPENAI_API_BASE}/chat/completions`;
-  const body = {
-    model: context.USER_CONFIG.CHAT_MODEL,
-    ...context.USER_CONFIG.OPENAI_API_EXTRA_PARAMS,
-    messages: [...history || [], { role: "user", content: message }],
-    stream: onStream != null
-  };
-  const header = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${openAIKeyFromContext(context)}`
-  };
-  return requestCompletionsFromOpenAILikes(url, header, body, context, onStream, (result) => {
-    setTimeout(() => updateBotUsage(result?.usage, context).catch(console.error), 0);
-  });
-}
-async function requestCompletionsFromAzureOpenAI(message, history, context, onStream) {
-  const url = context.USER_CONFIG.AZURE_COMPLETIONS_API;
-  const body = {
-    ...context.USER_CONFIG.OPENAI_API_EXTRA_PARAMS,
-    messages: [...history || [], { role: "user", content: message }],
-    stream: onStream != null
-  };
-  const header = {
-    "Content-Type": "application/json",
-    "api-key": azureKeyFromContext(context)
-  };
-  return requestCompletionsFromOpenAILikes(url, header, body, context, onStream);
-}
-async function requestCompletionsFromOpenAILikes(url, header, body, context, onStream, onResult = null) {
-  const controller = new AbortController();
-  const { signal } = controller;
-  const timeout = 1e3 * 60 * 5;
-  setTimeout(() => controller.abort(), timeout);
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: header,
-    body: JSON.stringify(body),
-    signal
-  });
-  if (onStream && resp.ok && isEventStreamResponse(resp)) {
-    const stream = new Stream(resp, controller);
-    let contentFull = "";
-    let lengthDelta = 0;
-    let updateStep = 20;
-    try {
-      for await (const data of stream) {
-        const c = data?.choices?.[0]?.delta?.content || "";
-        lengthDelta += c.length;
-        contentFull = contentFull + c;
-        if (lengthDelta > updateStep) {
-          lengthDelta = 0;
-          updateStep += 5;
-          await onStream(`${contentFull}
-${ENV.I18N.message.loading}...`);
-        }
-      }
-    } catch (e) {
-      contentFull += `
-ERROR: ${e.message}`;
-    }
-    return contentFull;
-  }
-  if (!isJsonResponse(resp)) {
-    throw new Error(resp.statusText);
-  }
-  const result = await resp.json();
-  if (!result) {
-    throw new Error("Empty response");
-  }
-  if (result.error?.message) {
-    throw new Error(result.error.message);
-  }
-  try {
-    onResult?.(result);
-    return result.choices[0].message.content;
-  } catch (e) {
-    throw Error(result?.error?.message || JSON.stringify(result));
-  }
-}
-async function requestImageFromOpenAI(prompt, context) {
-  let url = `${ENV.OPENAI_API_BASE}/images/generations`;
-  const header = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${openAIKeyFromContext(context)}`
-  };
-  const body = {
-    prompt,
-    n: 1,
-    size: context.USER_CONFIG.DALL_E_IMAGE_SIZE,
-    model: context.USER_CONFIG.DALL_E_MODEL
-  };
-  if (body.model === "dall-e-3") {
-    body.quality = context.USER_CONFIG.DALL_E_IMAGE_QUALITY;
-    body.style = context.USER_CONFIG.DALL_E_IMAGE_STYLE;
-  }
-  {
-    const provider = context.USER_CONFIG.AI_PROVIDER;
-    let isAzureModel = false;
-    switch (provider) {
-      case "azure":
-        isAzureModel = true;
-        break;
-      case "auto":
-        isAzureModel = isAzureEnable(context) && context.USER_CONFIG.AZURE_DALLE_API !== null;
-        break;
-      default:
-        break;
-    }
-    if (isAzureModel) {
-      url = context.USER_CONFIG.AZURE_DALLE_API;
-      const validSize = ["1792x1024", "1024x1024", "1024x1792"];
-      if (!validSize.includes(body.size)) {
-        body.size = "1024x1024";
-      }
-      header["api-key"] = azureKeyFromContext(context);
-      delete header["Authorization"];
-      delete body.model;
-    }
-  }
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: header,
-    body: JSON.stringify(body)
-  }).then((res) => res.json());
-  if (resp.error?.message) {
-    throw new Error(resp.error.message);
-  }
-  return resp.data[0].url;
-}
-async function updateBotUsage(usage, context) {
-  if (!ENV.ENABLE_USAGE_STATISTICS) {
-    return;
-  }
-  let dbValue = JSON.parse(await DATABASE.get(context.SHARE_CONTEXT.usageKey));
-  if (!dbValue) {
-    dbValue = {
-      tokens: {
-        total: 0,
-        chats: {}
-      }
-    };
-  }
-  dbValue.tokens.total += usage.total_tokens;
-  if (!dbValue.tokens.chats[context.SHARE_CONTEXT.chatId]) {
-    dbValue.tokens.chats[context.SHARE_CONTEXT.chatId] = usage.total_tokens;
-  } else {
-    dbValue.tokens.chats[context.SHARE_CONTEXT.chatId] += usage.total_tokens;
-  }
-  await DATABASE.put(context.SHARE_CONTEXT.usageKey, JSON.stringify(dbValue));
-}
-
-// src/workersai.js
-async function run(model, body) {
-  const id = ENV.CLOUDFLARE_ACCOUNT_ID;
-  const token = ENV.CLOUDFLARE_TOKEN;
-  return await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${id}/ai/run/${model}`,
-    {
-      headers: { Authorization: `Bearer ${token}` },
-      method: "POST",
-      body: JSON.stringify(body)
-    }
-  );
-}
-function isWorkersAIEnable(context) {
-  return !!(ENV.CLOUDFLARE_ACCOUNT_ID && ENV.CLOUDFLARE_TOKEN);
-}
-async function requestCompletionsFromWorkersAI(message, history, context, onStream) {
-  const model = ENV.WORKERS_CHAT_MODEL;
-  const request = {
-    messages: [...history || [], { role: "user", content: message }],
-    stream: onStream !== null
-  };
-  const resp = await run(model, request);
-  const controller = new AbortController();
-  if (onStream && resp.ok && isEventStreamResponse(resp)) {
-    const stream = new Stream(resp, controller);
-    let contentFull = "";
-    let lengthDelta = 0;
-    let updateStep = 20;
-    try {
-      for await (const chunk of stream) {
-        const c = chunk?.response || "";
-        lengthDelta += c.length;
-        contentFull = contentFull + c;
-        if (contentFull.endsWith("\n\n\n\n")) {
-          contentFull = contentFull.replace(/\n+$/, "");
-          controller.abort();
-          break;
-        }
-        if (lengthDelta > updateStep) {
-          lengthDelta = 0;
-          updateStep += 5;
-          await onStream(`${contentFull}
-${ENV.I18N.message.loading}...`);
-        }
-      }
-    } catch (e) {
-      contentFull = `ERROR: ${e.message}`;
-    }
-    return contentFull;
-  } else {
-    const data = await resp.json();
-    try {
-      return data.result.response;
-    } catch (e) {
-      if (!data) {
-        throw new Error("Empty response");
-      }
-      throw new Error(data?.errors?.[0]?.message || JSON.stringify(data));
-    }
-  }
-}
-async function requestImageFromWorkersAI(prompt, context) {
-  const raw = await run(ENV.WORKERS_IMAGE_MODEL, { prompt });
-  return await raw.blob();
-}
-
-// src/gemini.js
-function isGeminiAIEnable(context) {
-  return !!context.USER_CONFIG.GOOGLE_API_KEY;
-}
-async function requestCompletionsFromGeminiAI(message, history, context, onStream) {
-  const url = `${context.USER_CONFIG.GOOGLE_COMPLETIONS_API}${context.USER_CONFIG.GOOGLE_COMPLETIONS_MODEL}:${// 暂时不支持stream模式
-  // onStream ? 'streamGenerateContent' : 'generateContent'
-  "generateContent"}?key=${context.USER_CONFIG.GOOGLE_API_KEY}`;
-  const contentsTemp = [...history || [], { role: "user", content: message }];
-  const contents = [];
-  for (const msg of contentsTemp) {
-    switch (msg.role) {
-      case "assistant":
-        msg.role = "model";
-        break;
-      case "system":
-      case "user":
-        msg.role = "user";
-        break;
-      default:
-        continue;
-    }
-    if (contents.length === 0 || contents[contents.length - 1].role !== msg.role) {
-      contents.push({
-        "role": msg.role,
-        "parts": [
-          {
-            "text": msg.content
-          }
-        ]
-      });
-    } else {
-      contents[contents.length - 1].parts[0].text += msg.content;
-    }
-  }
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": CONST.USER_AGENT
-    },
-    body: JSON.stringify({ contents })
-  });
-  const data = await resp.json();
-  try {
-    return data.candidates[0].content.parts[0].text;
-  } catch (e) {
-    if (!data) {
-      throw new Error("Empty response");
-    }
-    throw new Error(data?.error?.message || JSON.stringify(data));
-  }
-}
-
-// src/mistralai.js
-function isMistralAIEnable(context) {
-  return !!(context.USER_CONFIG.MISTRAL_API_KEY && context.USER_CONFIG.MISTRAL_COMPLETIONS_API && context.USER_CONFIG.MISTRAL_CHAT_MODEL);
-}
-async function requestCompletionsFromMistralAI(message, history, context, onStream) {
-  const url = context.USER_CONFIG.MISTRAL_COMPLETIONS_API;
-  const body = {
-    model: context.USER_CONFIG.MISTRAL_CHAT_MODEL,
-    ...context.USER_CONFIG.OPENAI_API_EXTRA_PARAMS,
-    messages: [...history || [], { role: "user", content: message }],
-    stream: onStream != null
-  };
-  const header = {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${context.USER_CONFIG.MISTRAL_API_KEY}`
-  };
-  return requestCompletionsFromOpenAILikes(url, header, body, context, onStream);
-}
-
-// src/llm.js
-async function loadHistory(key, context) {
-  const initMessage = { role: "system", content: context.USER_CONFIG.SYSTEM_INIT_MESSAGE };
-  const historyDisable = ENV.AUTO_TRIM_HISTORY && ENV.MAX_HISTORY_LENGTH <= 0;
-  if (historyDisable) {
-    initMessage.role = ENV.SYSTEM_INIT_MESSAGE_ROLE;
-    return { real: [initMessage], original: [initMessage] };
-  }
-  let history = [];
-  try {
-    history = JSON.parse(await DATABASE.get(key));
-  } catch (e) {
-    console.error(e);
-  }
-  if (!history || !Array.isArray(history)) {
-    history = [];
-  }
-  let original = JSON.parse(JSON.stringify(history));
-  if (context.SHARE_CONTEXT.role) {
-    history = history.filter((chat) => context.SHARE_CONTEXT.role === chat.cosplay);
-  }
-  history.forEach((item) => {
-    delete item.cosplay;
-  });
-  const counter = await tokensCounter();
-  const trimHistory = (list, initLength, maxLength, maxToken) => {
-    if (list.length > maxLength) {
-      list = list.splice(list.length - maxLength);
-    }
-    let tokenLength = initLength;
-    for (let i = list.length - 1; i >= 0; i--) {
-      const historyItem = list[i];
-      let length = 0;
-      if (historyItem.content) {
-        length = counter(historyItem.content);
-      } else {
-        historyItem.content = "";
-      }
-      tokenLength += length;
-      if (tokenLength > maxToken) {
-        list = list.splice(i + 1);
-        break;
-      }
-    }
-    return list;
-  };
-  if (ENV.AUTO_TRIM_HISTORY && ENV.MAX_HISTORY_LENGTH > 0) {
-    const initLength = counter(initMessage.content);
-    const roleCount = Math.max(Object.keys(context.USER_DEFINE.ROLE).length, 1);
-    history = trimHistory(history, initLength, ENV.MAX_HISTORY_LENGTH, ENV.MAX_TOKEN_LENGTH);
-    original = trimHistory(original, initLength, ENV.MAX_HISTORY_LENGTH * roleCount, ENV.MAX_TOKEN_LENGTH * roleCount);
-  }
-  switch (history.length > 0 ? history[0].role : "") {
-    case "assistant":
-    case "system":
-      history[0] = initMessage;
-      break;
-    default:
-      history.unshift(initMessage);
-  }
-  if (ENV.SYSTEM_INIT_MESSAGE_ROLE !== "system" && history.length > 0 && history[0].role === "system") {
-    history[0].role = ENV.SYSTEM_INIT_MESSAGE_ROLE;
-  }
-  return { real: history, original };
-}
-function loadChatLLM(context) {
-  switch (context.USER_CONFIG.AI_PROVIDER) {
-    case "openai":
-      return requestCompletionsFromOpenAI;
-    case "azure":
-      return requestCompletionsFromAzureOpenAI;
-    case "workers":
-      return requestCompletionsFromWorkersAI;
-    case "gemini":
-      return requestCompletionsFromGeminiAI;
-    case "mistral":
-      return requestCompletionsFromMistralAI;
-    default:
-      if (isAzureEnable(context)) {
-        return requestCompletionsFromAzureOpenAI;
-      }
-      if (isOpenAIEnable(context)) {
-        return requestCompletionsFromOpenAI;
-      }
-      if (isWorkersAIEnable(context)) {
-        return requestCompletionsFromWorkersAI;
-      }
-      if (isGeminiAIEnable(context)) {
-        return requestCompletionsFromGeminiAI;
-      }
-      if (isMistralAIEnable(context)) {
-        return requestCompletionsFromMistralAI;
-      }
-      return null;
-  }
-}
-function loadImageGen(context) {
-  switch (context.USER_CONFIG.AI_PROVIDER) {
-    case "openai":
-      return requestImageFromOpenAI;
-    case "azure":
-      return requestImageFromOpenAI;
-    case "workers":
-      return requestImageFromWorkersAI;
-    default:
-      if (isOpenAIEnable(context) || isAzureEnable(context)) {
-        return requestImageFromOpenAI;
-      }
-      if (isWorkersAIEnable(context)) {
-        return requestImageFromWorkersAI;
-      }
-      return null;
-  }
-}
-async function requestCompletionsFromLLM(text, context, llm, modifier, onStream) {
-  const historyDisable = ENV.AUTO_TRIM_HISTORY && ENV.MAX_HISTORY_LENGTH <= 0;
-  const historyKey = context.SHARE_CONTEXT.chatHistoryKey;
-  let history = await loadHistory(historyKey, context);
-  if (modifier) {
-    const modifierData = modifier(history, text);
-    history = modifierData.history;
-    text = modifierData.text;
-  }
-  const { real: realHistory, original: originalHistory } = history;
-  const answer = await llm(text, realHistory, context, onStream);
-  if (!historyDisable) {
-    originalHistory.push({ role: "user", content: text || "", cosplay: context.SHARE_CONTEXT.role || "" });
-    originalHistory.push({ role: "assistant", content: answer, cosplay: context.SHARE_CONTEXT.role || "" });
-    await DATABASE.put(historyKey, JSON.stringify(originalHistory)).catch(console.error);
-  }
-  return answer;
-}
-async function chatWithLLM(text, context, modifier) {
-  try {
-    try {
-      const msg = await sendMessageToTelegramWithContext(context)(ENV.I18N.message.loading).then((r) => r.json());
-      context.CURRENT_CHAT_CONTEXT.message_id = msg.result.message_id;
-      context.CURRENT_CHAT_CONTEXT.reply_markup = null;
-    } catch (e) {
-      console.error(e);
-    }
-    setTimeout(() => sendChatActionToTelegramWithContext(context)("typing").catch(console.error), 0);
-    let onStream = null;
-    const parseMode = context.CURRENT_CHAT_CONTEXT.parse_mode;
-    if (ENV.STREAM_MODE) {
-      context.CURRENT_CHAT_CONTEXT.parse_mode = null;
-      onStream = async (text2) => {
-        try {
-          const resp = await sendMessageToTelegramWithContext(context)(text2);
-          if (!context.CURRENT_CHAT_CONTEXT.message_id && resp.ok) {
-            context.CURRENT_CHAT_CONTEXT.message_id = (await resp.json()).result.message_id;
-          }
-        } catch (e) {
-          console.error(e);
-        }
-      };
-    }
-    const llm = loadChatLLM(context);
-    if (llm === null) {
-      return sendMessageToTelegramWithContext(context)(`LLM is not enable`);
-    }
-    const answer = await requestCompletionsFromLLM(text, context, llm, modifier, onStream);
-    context.CURRENT_CHAT_CONTEXT.parse_mode = parseMode;
-    if (ENV.SHOW_REPLY_BUTTON && context.CURRENT_CHAT_CONTEXT.message_id) {
-      try {
-        await deleteMessageFromTelegramWithContext(context)(context.CURRENT_CHAT_CONTEXT.message_id);
-        context.CURRENT_CHAT_CONTEXT.message_id = null;
-        context.CURRENT_CHAT_CONTEXT.reply_markup = {
-          keyboard: [[{ text: "/new" }, { text: "/redo" }]],
-          selective: true,
-          resize_keyboard: true,
-          one_time_keyboard: true
-        };
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return sendMessageToTelegramWithContext(context)(answer);
-  } catch (e) {
-    let errMsg = `Error: ${e.message}`;
-    if (errMsg.length > 2048) {
-      errMsg = errMsg.substring(0, 2048);
-    }
-    context.CURRENT_CHAT_CONTEXT.disable_web_page_preview = true;
-    return sendMessageToTelegramWithContext(context)(errMsg);
-  }
-}
-
-// src/command.js
-var commandAuthCheck = {
-  default: function(chatType) {
-    if (CONST.GROUP_TYPES.includes(chatType)) {
-      return ["administrator", "creator"];
-    }
-    return false;
-  },
-  shareModeGroup: function(chatType) {
-    if (CONST.GROUP_TYPES.includes(chatType)) {
-      if (!ENV.GROUP_CHAT_BOT_SHARE_MODE) {
-        return false;
-      }
-      return ["administrator", "creator"];
-    }
-    return false;
-  }
-};
-var commandSortList = [
-  "/new",
-  "/redo",
-  "/img",
-  "/role",
-  "/setenv",
-  "/delenv",
-  "/version",
-  "/usage",
-  "/system",
-  "/help"
-];
-var commandHandlers = {
-  "/help": {
-    scopes: ["all_private_chats", "all_chat_administrators"],
-    fn: commandGetHelp
-  },
-  "/new": {
-    scopes: ["all_private_chats", "all_group_chats", "all_chat_administrators"],
-    fn: commandCreateNewChatContext,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/start": {
-    scopes: [],
-    fn: commandCreateNewChatContext,
-    needAuth: commandAuthCheck.default
-  },
-  "/img": {
-    scopes: ["all_private_chats", "all_chat_administrators"],
-    fn: commandGenerateImg,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/version": {
-    scopes: ["all_private_chats", "all_chat_administrators"],
-    fn: commandFetchUpdate,
-    needAuth: commandAuthCheck.default
-  },
-  "/setenv": {
-    scopes: [],
-    fn: commandUpdateUserConfig,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/setenvs": {
-    scopes: [],
-    fn: commandUpdateUserConfigs,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/delenv": {
-    scopes: [],
-    fn: commandDeleteUserConfig,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/clearenv": {
-    scopes: [],
-    fn: commandClearUserConfig,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/usage": {
-    scopes: ["all_private_chats", "all_chat_administrators"],
-    fn: commandUsage,
-    needAuth: commandAuthCheck.default
-  },
-  "/system": {
-    scopes: ["all_private_chats", "all_chat_administrators"],
-    fn: commandSystem,
-    needAuth: commandAuthCheck.default
-  },
-  "/role": {
-    scopes: ["all_private_chats"],
-    fn: commandUpdateRole,
-    needAuth: commandAuthCheck.shareModeGroup
-  },
-  "/redo": {
-    scopes: ["all_private_chats", "all_group_chats", "all_chat_administrators"],
-    fn: commandRegenerate,
-    needAuth: commandAuthCheck.shareModeGroup
-  }
-};
-async function commandUpdateRole(message, command, subcommand, context) {
-  if (subcommand === "show") {
-    const size = Object.getOwnPropertyNames(context.USER_DEFINE.ROLE).length;
-    if (size === 0) {
-      return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.not_defined_any_role);
-    }
-    let showMsg = ENV.I18N.command.role.current_defined_role(size);
-    for (const role2 in context.USER_DEFINE.ROLE) {
-      if (context.USER_DEFINE.ROLE.hasOwnProperty(role2)) {
-        showMsg += `~${role2}:
-<pre>`;
-        showMsg += JSON.stringify(context.USER_DEFINE.ROLE[role2]) + "\n";
-        showMsg += "</pre>";
-      }
-    }
-    context.CURRENT_CHAT_CONTEXT.parse_mode = "HTML";
-    return sendMessageToTelegramWithContext(context)(showMsg);
-  }
-  const kv = subcommand.indexOf(" ");
-  if (kv === -1) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.help);
-  }
-  const role = subcommand.slice(0, kv);
-  const settings = subcommand.slice(kv + 1).trim();
-  const skv = settings.indexOf("=");
-  if (skv === -1) {
-    if (settings === "del") {
-      try {
-        if (context.USER_DEFINE.ROLE[role]) {
-          delete context.USER_DEFINE.ROLE[role];
-          await DATABASE.put(
-            context.SHARE_CONTEXT.configStoreKey,
-            JSON.stringify(Object.assign(context.USER_CONFIG, { USER_DEFINE: context.USER_DEFINE }))
-          );
-          return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.delete_role_success);
-        }
-      } catch (e) {
-        return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.delete_role_error(e));
-      }
-    }
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.help);
-  }
-  const key = settings.slice(0, skv);
-  const value = settings.slice(skv + 1);
-  if (!context.USER_DEFINE.ROLE[role]) {
-    context.USER_DEFINE.ROLE[role] = {
-      // 系统初始化消息
-      SYSTEM_INIT_MESSAGE: ENV.SYSTEM_INIT_MESSAGE,
-      // OpenAI API 额外参数
-      OPENAI_API_EXTRA_PARAMS: {}
-    };
-  }
-  try {
-    mergeConfig(context.USER_DEFINE.ROLE[role], key, value);
-    await DATABASE.put(
-      context.SHARE_CONTEXT.configStoreKey,
-      JSON.stringify(Object.assign(context.USER_CONFIG, { USER_DEFINE: context.USER_DEFINE }))
-    );
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.update_role_success);
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.role.update_role_error(e));
-  }
-}
-async function commandGenerateImg(message, command, subcommand, context) {
-  if (subcommand === "") {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.img.help);
-  }
-  try {
-    setTimeout(() => sendChatActionToTelegramWithContext(context)("upload_photo").catch(console.error), 0);
-    const gen = loadImageGen(context);
-    if (!gen) {
-      return sendMessageToTelegramWithContext(context)(`ERROR: Image generator not found`);
-    }
-    const img = await gen(subcommand, context);
-    return sendPhotoToTelegramWithContext(context)(img);
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
-  }
-}
-async function commandGetHelp(message, command, subcommand, context) {
-  const helpMsg = ENV.I18N.command.help.summary + Object.keys(commandHandlers).map((key) => `${key}\uFF1A${ENV.I18N.command.help[key.substring(1)]}`).join("\n");
-  return sendMessageToTelegramWithContext(context)(helpMsg);
-}
-async function commandCreateNewChatContext(message, command, subcommand, context) {
-  try {
-    await DATABASE.delete(context.SHARE_CONTEXT.chatHistoryKey);
-    context.CURRENT_CHAT_CONTEXT.reply_markup = JSON.stringify({
-      remove_keyboard: true,
-      selective: true
-    });
-    if (command === "/new") {
-      return sendMessageToTelegramWithContext(context)(ENV.I18N.command.new.new_chat_start);
-    } else {
-      if (context.SHARE_CONTEXT.chatType === "private") {
-        return sendMessageToTelegramWithContext(context)(ENV.I18N.command.new.new_chat_start_private(context.CURRENT_CHAT_CONTEXT.chat_id));
-      } else {
-        return sendMessageToTelegramWithContext(context)(ENV.I18N.command.new.new_chat_start_group(context.CURRENT_CHAT_CONTEXT.chat_id));
-      }
-    }
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(`ERROR: ${e.message}`);
-  }
-}
-async function commandUpdateUserConfig(message, command, subcommand, context) {
-  const kv = subcommand.indexOf("=");
-  if (kv === -1) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.help);
-  }
-  const key = subcommand.slice(0, kv);
-  const value = subcommand.slice(kv + 1);
-  if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
-    const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${key} is locked`));
-    return sendMessageToTelegramWithContext(context)(msg);
-  }
-  try {
-    context.USER_CONFIG.DEFINE_KEYS.push(key);
-    context.USER_CONFIG.DEFINE_KEYS = Array.from(new Set(context.USER_CONFIG.DEFINE_KEYS));
-    mergeConfig(context.USER_CONFIG, key, value);
-    await DATABASE.put(
-      context.SHARE_CONTEXT.configStoreKey,
-      JSON.stringify(context.USER_CONFIG)
-    );
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_error(e));
-  }
-}
-async function commandUpdateUserConfigs(message, command, subcommand, context) {
-  try {
-    const values = JSON.parse(subcommand);
-    for (const ent of Object.entries(values)) {
-      const [key, value] = ent;
-      if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
-        const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${key} is locked`));
-        return sendMessageToTelegramWithContext(context)(msg);
-      }
-      context.USER_CONFIG.DEFINE_KEYS.push(key);
-      mergeConfig(context.USER_CONFIG, key, value);
-      console.log(JSON.stringify(context.USER_CONFIG));
-    }
-    context.USER_CONFIG.DEFINE_KEYS = Array.from(new Set(context.USER_CONFIG.DEFINE_KEYS));
-    await DATABASE.put(
-      context.SHARE_CONTEXT.configStoreKey,
-      JSON.stringify(context.USER_CONFIG)
-    );
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_error(e));
-  }
-}
-async function commandDeleteUserConfig(message, command, subcommand, context) {
-  if (ENV.LOCK_USER_CONFIG_KEYS.includes(subcommand)) {
-    const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${subcommand} is locked`));
-    return sendMessageToTelegramWithContext(context)(msg);
-  }
-  try {
-    context.USER_CONFIG[subcommand] = null;
-    context.USER_CONFIG.DEFINE_KEYS = context.USER_CONFIG.DEFINE_KEYS.filter((key) => key !== subcommand);
-    await DATABASE.put(
-      context.SHARE_CONTEXT.configStoreKey,
-      JSON.stringify(context.USER_CONFIG)
-    );
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_error(e));
-  }
-}
-async function commandClearUserConfig(message, command, subcommand, context) {
-  if (ENV.LOCK_USER_CONFIG_KEYS.includes(subcommand)) {
-    const msg = ENV.I18N.command.setenv.update_config_error(new Error(`Key ${subcommand} is locked`));
-    return sendMessageToTelegramWithContext(context)(msg);
-  }
-  try {
-    context.USER_CONFIG.DEFINE_KEYS = [];
-    context.USER_CONFIG[subcommand] = null;
-    await DATABASE.put(
-      context.SHARE_CONTEXT.configStoreKey,
-      JSON.stringify({})
-    );
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_success);
-  } catch (e) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.setenv.update_config_error(e));
-  }
-}
-async function commandFetchUpdate(message, command, subcommand, context) {
-  const config = {
-    headers: {
-      "User-Agent": CONST.USER_AGENT
-    }
-  };
-  const current = {
-    ts: ENV.BUILD_TIMESTAMP,
-    sha: ENV.BUILD_VERSION
-  };
-  const repo = `https://raw.githubusercontent.com/TBXark/ChatGPT-Telegram-Workers/${ENV.UPDATE_BRANCH}`;
-  const ts = `${repo}/dist/timestamp`;
-  const info = `${repo}/dist/buildinfo.json`;
-  let online = await fetch(info, config).then((r) => r.json()).catch(() => null);
-  if (!online) {
-    online = await fetch(ts, config).then((r) => r.text()).then((ts2) => ({ ts: Number(ts2.trim()), sha: "unknown" })).catch(() => ({ ts: 0, sha: "unknown" }));
-  }
-  if (current.ts < online.ts) {
-    const msg = ENV.I18N.command.version.new_version_found(current, online);
-    return sendMessageToTelegramWithContext(context)(msg);
-  } else {
-    const msg = ENV.I18N.command.version.current_is_latest_version(current);
-    return sendMessageToTelegramWithContext(context)(msg);
-  }
-}
-async function commandUsage(message, command, subcommand, context) {
-  if (!ENV.ENABLE_USAGE_STATISTICS) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.command.usage.usage_not_open);
-  }
-  const usage = JSON.parse(await DATABASE.get(context.SHARE_CONTEXT.usageKey));
-  let text = ENV.I18N.command.usage.current_usage;
-  if (usage?.tokens) {
-    const { tokens } = usage;
-    const sortedChats = Object.keys(tokens.chats || {}).sort((a, b) => tokens.chats[b] - tokens.chats[a]);
-    text += ENV.I18N.command.usage.total_usage(tokens.total);
-    for (let i = 0; i < Math.min(sortedChats.length, 30); i++) {
-      text += `
-  - ${sortedChats[i]}: ${tokens.chats[sortedChats[i]]} tokens`;
-    }
-    if (sortedChats.length === 0) {
-      text += "0 tokens";
-    } else if (sortedChats.length > 30) {
-      text += "\n  ...";
-    }
-  } else {
-    text += ENV.I18N.command.usage.no_usage;
-  }
-  return sendMessageToTelegramWithContext(context)(text);
-}
-async function commandSystem(message, command, subcommand, context) {
-  let msg = "ENV.CHAT_MODEL: " + ENV.CHAT_MODEL + "\n";
-  if (ENV.DEV_MODE) {
-    const shareCtx = { ...context.SHARE_CONTEXT };
-    shareCtx.currentBotToken = "******";
-    context.USER_CONFIG.OPENAI_API_KEY = "******";
-    context.USER_CONFIG.AZURE_API_KEY = "******";
-    context.USER_CONFIG.AZURE_COMPLETIONS_API = "******";
-    context.USER_CONFIG.AZURE_DALLE_API = "******";
-    context.USER_CONFIG.GOOGLE_API_KEY = "******";
-    context.USER_CONFIG.MISTRAL_API_KEY = "******";
-    msg = "<pre>\n" + msg;
-    msg += `USER_CONFIG: ${JSON.stringify(context.USER_CONFIG, null, 2)}
-`;
-    msg += `CHAT_CONTEXT: ${JSON.stringify(context.CURRENT_CHAT_CONTEXT, null, 2)}
-`;
-    msg += `SHARE_CONTEXT: ${JSON.stringify(shareCtx, null, 2)}
-`;
-    msg += "</pre>";
-  }
-  context.CURRENT_CHAT_CONTEXT.parse_mode = "HTML";
-  return sendMessageToTelegramWithContext(context)(msg);
-}
-async function commandRegenerate(message, command, subcommand, context) {
-  const mf = (history, text) => {
-    const { real, original } = history;
-    let nextText = text;
-    while (true) {
-      const data = real.pop();
-      original.pop();
-      if (data === void 0 || data === null) {
-        break;
-      } else if (data.role === "user") {
-        if (text === "" || text === void 0 || text === null) {
-          nextText = data.content;
-        }
-        break;
-      }
-    }
-    return { history: { real, original }, text: nextText };
-  };
-  return chatWithLLM(null, context, mf);
-}
-async function commandEcho(message, command, subcommand, context) {
-  let msg = "<pre>";
-  msg += JSON.stringify({ message }, null, 2);
-  msg += "</pre>";
-  context.CURRENT_CHAT_CONTEXT.parse_mode = "HTML";
-  return sendMessageToTelegramWithContext(context)(msg);
-}
-async function handleCommandMessage(message, context) {
-  if (ENV.DEV_MODE) {
-    commandHandlers["/echo"] = {
-      help: "[DEBUG ONLY] echo message",
-      scopes: ["all_private_chats", "all_chat_administrators"],
-      fn: commandEcho,
-      needAuth: commandAuthCheck.default
-    };
-  }
-  if (CUSTOM_COMMAND[message.text]) {
-    message.text = CUSTOM_COMMAND[message.text];
-  }
-  for (const key in commandHandlers) {
-    if (message.text === key || message.text.startsWith(key + " ")) {
-      const command = commandHandlers[key];
-      try {
-        if (command.needAuth) {
-          const roleList = command.needAuth(context.SHARE_CONTEXT.chatType);
-          if (roleList) {
-            const chatRole = await getChatRoleWithContext(context)(context.SHARE_CONTEXT.speakerId);
-            if (chatRole === null) {
-              return sendMessageToTelegramWithContext(context)(ENV.I18N.command.permission.not_authorized);
-            }
-            if (!roleList.includes(chatRole)) {
-              const msg = ENV.I18N.command.permission.not_enough_permission(roleList, chatRole);
-              return sendMessageToTelegramWithContext(context)(msg);
-            }
-          }
-        }
-      } catch (e) {
-        return sendMessageToTelegramWithContext(context)(ENV.I18N.command.permission.role_error(e));
-      }
-      const subcommand = message.text.substring(key.length).trim();
-      try {
-        return await command.fn(message, key, subcommand, context);
-      } catch (e) {
-        return sendMessageToTelegramWithContext(context)(ENV.I18N.command.permission.command_error(e));
-      }
-    }
-  }
-  return null;
-}
-async function bindCommandForTelegram(token) {
-  const scopeCommandMap = {
-    all_private_chats: [],
-    all_group_chats: [],
-    all_chat_administrators: []
-  };
-  const commands = commandSortList;
-  if (!ENV.ENABLE_USAGE_STATISTICS) {
-    commands.splice(commands.indexOf("/usage"), 1);
-  }
-  for (const key of commands) {
-    if (ENV.HIDE_COMMAND_BUTTONS.includes(key)) {
-      continue;
-    }
-    if (commandHandlers.hasOwnProperty(key) && commandHandlers[key].scopes) {
-      for (const scope of commandHandlers[key].scopes) {
-        if (!scopeCommandMap[scope]) {
-          scopeCommandMap[scope] = [];
-        }
-        scopeCommandMap[scope].push(key);
-      }
-    }
-  }
-  const result = {};
-  for (const scope in scopeCommandMap) {
-    result[scope] = await fetch(
-      `https://api.telegram.org/bot${token}/setMyCommands`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          commands: scopeCommandMap[scope].map((command) => ({
-            command,
-            description: ENV.I18N.command.help[command.substring(1)] || ""
-          })),
-          scope: {
-            type: scope
-          }
-        })
-      }
-    ).then((res) => res.json());
-  }
-  return { ok: true, result };
-}
-function commandsDocument() {
-  return Object.keys(commandHandlers).map((key) => {
-    return {
-      command: key,
-      description: ENV.I18N.command.help[key.substring(1)]
-    };
-  });
-}
-
-// src/message.js
+// src/telegram/message.js
 async function msgInitChatContext(message, context) {
-  try {
-    await context.initContext(message);
-  } catch (e) {
-    return new Response(errorToString(e), { status: 200 });
-  }
+  await context.initContext(message);
   return null;
 }
 async function msgSaveLastMessage(message, context) {
@@ -2101,20 +2306,18 @@ async function msgIgnoreOldMessage(message, context) {
   if (ENV.SAFE_MODE) {
     let idList = [];
     try {
-      idList = JSON.parse(await DATABASE.get(context.SHARE_CONTEXT.chatLastMessageIDKey).catch(() => "[]")) || [];
+      idList = JSON.parse(await DATABASE.get(context.SHARE_CONTEXT.chatLastMessageIdKey).catch(() => "[]")) || [];
     } catch (e) {
       console.error(e);
     }
     if (idList.includes(message.message_id)) {
-      return new Response(JSON.stringify({
-        ok: true
-      }), { status: 200 });
+      throw new Error("Ignore old message");
     } else {
       idList.push(message.message_id);
       if (idList.length > 100) {
         idList.shift();
       }
-      await DATABASE.put(context.SHARE_CONTEXT.chatLastMessageIDKey, JSON.stringify(idList));
+      await DATABASE.put(context.SHARE_CONTEXT.chatLastMessageIdKey, JSON.stringify(idList));
     }
   }
   return null;
@@ -2132,35 +2335,38 @@ async function msgFilterWhiteList(message, context) {
   if (context.SHARE_CONTEXT.chatType === "private") {
     if (!ENV.CHAT_WHITE_LIST.includes(`${context.CURRENT_CHAT_CONTEXT.chat_id}`)) {
       return sendMessageToTelegramWithContext(context)(
-        ENV.I18N.message.user_has_no_permission_to_use_the_bot(context.CURRENT_CHAT_CONTEXT.chat_id)
+        `You are not in the white list, please contact the administrator to add you to the white list. Your chat_id: ${context.CURRENT_CHAT_CONTEXT.chat_id}`
       );
     }
     return null;
   }
   if (CONST.GROUP_TYPES.includes(context.SHARE_CONTEXT.chatType)) {
     if (!ENV.GROUP_CHAT_BOT_ENABLE) {
-      return new Response("Not support", { status: 401 });
+      throw new Error("Not support");
     }
     if (!ENV.CHAT_GROUP_WHITE_LIST.includes(`${context.CURRENT_CHAT_CONTEXT.chat_id}`)) {
       return sendMessageToTelegramWithContext(context)(
-        ENV.I18N.message.group_has_no_permission_to_use_the_bot(context.CURRENT_CHAT_CONTEXT.chat_id)
+        `Your group are not in the white list, please contact the administrator to add you to the white list. Your chat_id: ${context.CURRENT_CHAT_CONTEXT.chat_id}`
       );
     }
     return null;
   }
   return sendMessageToTelegramWithContext(context)(
-    ENV.I18N.message.not_supported_chat_type(context.SHARE_CONTEXT.chatType)
+    `Not support chat type: ${context.SHARE_CONTEXT.chatType}`
   );
 }
-async function msgFilterNonTextMessage(message, context) {
-  if (!message.text) {
-    return sendMessageToTelegramWithContext(context)(ENV.I18N.message.not_supported_chat_type_message);
+async function msgFilterUnsupportedMessage(message, context) {
+  if (message.text) {
+    return null;
   }
-  return null;
+  if (message.caption) {
+    return null;
+  }
+  throw new Error("Not supported message type");
 }
 async function msgHandleGroupMessage(message, context) {
-  if (!message.text) {
-    return new Response("Non text message", { status: 200 });
+  if (!CONST.GROUP_TYPES.includes(context.SHARE_CONTEXT.chatType)) {
+    return null;
   }
   let botName = context.SHARE_CONTEXT.currentBotName;
   if (message.reply_to_message) {
@@ -2175,138 +2381,91 @@ async function msgHandleGroupMessage(message, context) {
     context.SHARE_CONTEXT.currentBotName = res.info.bot_name;
     botName = res.info.bot_name;
   }
-  if (botName) {
-    let mentioned = false;
-    if (message.entities) {
-      let content = "";
-      let offset = 0;
-      message.entities.forEach((entity) => {
-        switch (entity.type) {
-          case "bot_command":
-            if (!mentioned) {
-              const mention = message.text.substring(
-                entity.offset,
-                entity.offset + entity.length
-              );
-              if (mention.endsWith(botName)) {
-                mentioned = true;
-              }
-              const cmd = mention.replaceAll("@" + botName, "").replaceAll(botName, "").trim();
-              content += cmd;
-              offset = entity.offset + entity.length;
-            }
-            break;
-          case "mention":
-          case "text_mention":
-            if (!mentioned) {
-              const mention = message.text.substring(
-                entity.offset,
-                entity.offset + entity.length
-              );
-              if (mention === botName || mention === "@" + botName) {
-                mentioned = true;
-              }
-            }
-            content += message.text.substring(offset, entity.offset);
-            offset = entity.offset + entity.length;
-            break;
+  if (!botName) {
+    throw new Error("Not set bot name");
+  }
+  if (!message.entities) {
+    throw new Error("No entities");
+  }
+  const { text, caption } = message;
+  let originContent = text || caption || "";
+  if (!originContent) {
+    throw new Error("Empty message");
+  }
+  let content = "";
+  let offset = 0;
+  let mentioned = false;
+  for (const entity of message.entities) {
+    switch (entity.type) {
+      case "bot_command":
+        if (!mentioned) {
+          const mention = originContent.substring(
+            entity.offset,
+            entity.offset + entity.length
+          );
+          if (mention.endsWith(botName)) {
+            mentioned = true;
+          }
+          const cmd = mention.replaceAll("@" + botName, "").replaceAll(botName, "").trim();
+          content += cmd;
+          offset = entity.offset + entity.length;
         }
-      });
-      content += message.text.substring(offset, message.text.length);
-      message.text = content.trim();
-    }
-    if (!mentioned) {
-      return new Response("No mentioned", { status: 200 });
-    } else {
-      return null;
-    }
-  }
-  return new Response("Not set bot name", { status: 200 });
-}
-async function msgHandleCommand(message, context) {
-  return await handleCommandMessage(message, context);
-}
-async function msgHandleRole(message, context) {
-  if (!message.text.startsWith("~")) {
-    return null;
-  }
-  message.text = message.text.slice(1);
-  const kv = message.text.indexOf(" ");
-  if (kv === -1) {
-    return null;
-  }
-  const role = message.text.slice(0, kv);
-  const msg = message.text.slice(kv + 1).trim();
-  if (context.USER_DEFINE.ROLE.hasOwnProperty(role)) {
-    context.SHARE_CONTEXT.role = role;
-    message.text = msg;
-    const roleConfig = context.USER_DEFINE.ROLE[role];
-    for (const key in roleConfig) {
-      if (context.USER_CONFIG.hasOwnProperty(key) && typeof context.USER_CONFIG[key] === typeof roleConfig[key]) {
-        if (ENV.LOCK_USER_CONFIG_KEYS.includes(key)) {
-          continue;
+        break;
+      case "mention":
+      case "text_mention":
+        if (!mentioned) {
+          const mention = originContent.substring(
+            entity.offset,
+            entity.offset + entity.length
+          );
+          if (mention === botName || mention === "@" + botName) {
+            mentioned = true;
+          }
         }
-        context.USER_CONFIG[key] = roleConfig[key];
-      }
+        content += originContent.substring(offset, entity.offset);
+        offset = entity.offset + entity.length;
+        break;
     }
   }
-}
-async function msgChatWithLLM(message, context) {
-  let text = message.text;
-  if (ENV.EXTRA_MESSAGE_CONTEXT && context.SHARE_CONTEXT.extraMessageContext && context.SHARE_CONTEXT.extraMessageContext.text) {
-    text = context.SHARE_CONTEXT.extraMessageContext.text + "\n" + text;
-  }
-  return chatWithLLM(text, context, null);
-}
-async function msgProcessByChatType(message, context) {
-  const handlerMap = {
-    "private": [
-      msgFilterWhiteList,
-      msgFilterNonTextMessage,
-      msgHandleCommand,
-      msgHandleRole
-    ],
-    "group": [
-      msgHandleGroupMessage,
-      msgFilterWhiteList,
-      msgHandleCommand,
-      msgHandleRole
-    ],
-    "supergroup": [
-      msgHandleGroupMessage,
-      msgFilterWhiteList,
-      msgHandleCommand,
-      msgHandleRole
-    ]
-  };
-  if (!handlerMap.hasOwnProperty(context.SHARE_CONTEXT.chatType)) {
-    return sendMessageToTelegramWithContext(context)(
-      ENV.I18N.message.not_supported_chat_type(context.SHARE_CONTEXT.chatType)
-    );
-  }
-  const handlers = handlerMap[context.SHARE_CONTEXT.chatType];
-  for (const handler of handlers) {
-    try {
-      const result = await handler(message, context);
-      if (result && result instanceof Response) {
-        return result;
-      }
-    } catch (e) {
-      console.error(e);
-      return sendMessageToTelegramWithContext(context)(
-        ENV.I18N.message.handle_chat_type_message_error(context.SHARE_CONTEXT.chatType)
-      );
-    }
+  content += originContent.substring(offset, originContent.length);
+  message.text = content.trim();
+  if (!mentioned) {
+    throw new Error("No mentioned");
   }
   return null;
 }
+async function msgHandleCommand(message, context) {
+  if (!message.text) {
+    return null;
+  }
+  return await handleCommandMessage(message, context);
+}
+async function msgChatWithLLM(message, context) {
+  const { text, caption } = message;
+  let content = text || caption;
+  if (ENV.EXTRA_MESSAGE_CONTEXT && context.SHARE_CONTEXT.extraMessageContext && context.SHARE_CONTEXT.extraMessageContext.text) {
+    content = context.SHARE_CONTEXT.extraMessageContext.text + "\n" + text;
+  }
+  const params = { message: content };
+  if (message.photo && message.photo.length > 0) {
+    let sizeIndex = 0;
+    if (ENV.TELEGRAM_PHOTO_SIZE_OFFSET >= 0) {
+      sizeIndex = ENV.TELEGRAM_PHOTO_SIZE_OFFSET;
+    } else if (ENV.TELEGRAM_PHOTO_SIZE_OFFSET < 0) {
+      sizeIndex = message.photo.length + ENV.TELEGRAM_PHOTO_SIZE_OFFSET;
+    }
+    sizeIndex = Math.max(0, Math.min(sizeIndex, message.photo.length - 1));
+    const fileId = message.photo[sizeIndex].file_id;
+    let url = await getFileLink(fileId, context.SHARE_CONTEXT.currentBotToken);
+    if (ENV.TELEGRAPH_ENABLE) {
+      url = await uploadImageToTelegraph(url);
+    }
+    params.images = [url];
+  }
+  return chatWithLLM(params, context, null);
+}
 async function loadMessage(request, context) {
   const raw = await request.json();
-  if (ENV.DEV_MODE) {
-    setTimeout(() => {
-      DATABASE.put(`log:${(/* @__PURE__ */ new Date()).toISOString()}`, JSON.stringify(raw), { expirationTtl: 600 }).catch(console.error);
-    });
-  }
   if (raw.edited_message) {
     throw new Error("Ignore edited message");
   }
@@ -2321,18 +2480,24 @@ async function handleMessage(request) {
   context.initTelegramContext(request);
   const message = await loadMessage(request, context);
   const handlers = [
-    msgInitChatContext,
     // 初始化聊天上下文: 生成chat_id, reply_to_message_id(群组消息), SHARE_CONTEXT
-    msgSaveLastMessage,
-    // 保存最后一条消息
+    msgInitChatContext,
+    // 检查环境是否准备好: DATABASE
     msgCheckEnvIsReady,
-    // 检查环境是否准备好: API_KEY, DATABASE
-    msgProcessByChatType,
-    // 根据类型对消息进一步处理
-    msgIgnoreOldMessage,
+    // 过滤非白名单用户
+    msgFilterWhiteList,
+    // DEBUG: 保存最后一条消息
+    msgSaveLastMessage,
+    // 过滤不支持的消息(抛出异常结束消息处理)
+    msgFilterUnsupportedMessage,
+    // 处理群消息，判断是否需要响应此条消息
+    msgHandleGroupMessage,
     // 忽略旧消息
-    msgChatWithLLM
+    msgIgnoreOldMessage,
+    // 处理命令消息
+    msgHandleCommand,
     // 与llm聊天
+    msgChatWithLLM
   ];
   for (const handler of handlers) {
     try {
@@ -2349,7 +2514,7 @@ async function handleMessage(request) {
 }
 
 // src/router.js
-var helpLink = "https://github.com/TBXark/ChatGPT-Telegram-Workers/blob/master/doc/DEPLOY.md";
+var helpLink = "https://github.com/TBXark/ChatGPT-Telegram-Workers/blob/master/doc/en/DEPLOY.md";
 var issueLink = "https://github.com/TBXark/ChatGPT-Telegram-Workers/issues";
 var initLink = "./init";
 var footer = `
@@ -2386,28 +2551,6 @@ async function bindWebHookAction(request) {
     `);
   return new Response(HTML, { status: 200, headers: { "Content-Type": "text/html" } });
 }
-async function loadChatHistory(request) {
-  const password = await historyPassword();
-  const { pathname } = new URL(request.url);
-  const historyKey = pathname.match(/^\/telegram\/(.+)\/history/)[1];
-  const params = new URL(request.url).searchParams;
-  const passwordParam = params.get("password");
-  if (passwordParam !== password) {
-    return new Response("Password Error", { status: 401 });
-  }
-  const history = JSON.parse(await DATABASE.get(historyKey));
-  const HTML = renderHTML(`
-        <div id="history" style="width: 100%; height: 100%; overflow: auto; padding: 10px;">
-            ${history.map((item) => `
-                <div style="margin-bottom: 10px;">
-                    <hp style="font-size: 16px; color: #999; margin-bottom: 5px;">${item.role}:</hp>
-                    <p style="font-size: 12px; color: #333;">${item.content}</p>
-                </div>
-            `).join("")}
-        </div>
-  `);
-  return new Response(HTML, { status: 200, headers: { "Content-Type": "text/html" } });
-}
 async function telegramWebhook(request) {
   try {
     return await makeResponse200(await handleMessage(request));
@@ -2440,7 +2583,6 @@ async function defaultIndexAction() {
     <br/>
     <p>You must <strong><a href="${initLink}"> >>>>> click here <<<<< </a></strong> to bind the webhook.</p>
     <br/>
-    ${ENV.API_KEY ? "" : buildKeyNotFoundHTML("API_KEY")}
     <p>After binding the webhook, you can use the following commands to control the bot:</p>
     ${commandsDocument().map((item) => `<p><strong>${item.command}</strong> - ${item.description}</p>`).join("")}
     <br/>
@@ -2448,19 +2590,6 @@ async function defaultIndexAction() {
     <p><strong>/telegram/:token/bot</strong> - Get bot information</p>
     ${footer}
   `);
-  return new Response(HTML, { status: 200, headers: { "Content-Type": "text/html" } });
-}
-async function gpt3TokenTest(request) {
-  const text = new URL(request.url).searchParams.get("text") || "Hello World";
-  const counter = await tokensCounter();
-  const HTML = renderHTML(`
-    <h1>ChatGPT-Telegram-Workers</h1>
-    <br/>
-    <p>Token Counter:</p>
-    <p>source text: ${text}</p>
-    <p>token count: ${counter(text)}</p>
-    <br/>
-    `);
   return new Response(HTML, { status: 200, headers: { "Content-Type": "text/html" } });
 }
 async function loadBotInfo() {
@@ -2500,12 +2629,6 @@ async function handleRequest(request) {
     return telegramSafeHook(request);
   }
   if (ENV.DEV_MODE || ENV.DEBUG_MODE) {
-    if (pathname.startsWith(`/telegram`) && pathname.endsWith(`/history`)) {
-      return loadChatHistory(request);
-    }
-    if (pathname.startsWith(`/gpt3/tokens/test`)) {
-      return gpt3TokenTest(request);
-    }
     if (pathname.startsWith(`/telegram`) && pathname.endsWith(`/bot`)) {
       return loadBotInfo();
     }
@@ -2514,256 +2637,16 @@ async function handleRequest(request) {
 }
 
 // src/i18n/zh-hans.js
-var zh_hans_default = {
-  env: {
-    "system_init_message": "\u4F60\u662F\u4E00\u4E2A\u5F97\u529B\u7684\u52A9\u624B"
-  },
-  utils: {
-    "not_supported_configuration": "\u4E0D\u652F\u6301\u7684\u914D\u7F6E\u9879\u6216\u6570\u636E\u7C7B\u578B\u9519\u8BEF"
-  },
-  message: {
-    "loading": "\u52A0\u8F7D\u4E2D",
-    "not_supported_chat_type": (type) => `\u6682\u4E0D\u652F\u6301${type}\u7C7B\u578B\u7684\u804A\u5929`,
-    "not_supported_chat_type_message": "\u6682\u4E0D\u652F\u6301\u975E\u6587\u672C\u683C\u5F0F\u6D88\u606F",
-    "handle_chat_type_message_error": (type) => `\u5904\u7406${type}\u7C7B\u578B\u7684\u804A\u5929\u6D88\u606F\u51FA\u9519`,
-    "user_has_no_permission_to_use_the_bot": (id) => `\u4F60\u6CA1\u6709\u6743\u9650\u4F7F\u7528\u8FD9\u4E2Abot, \u8BF7\u8BF7\u8054\u7CFB\u7BA1\u7406\u5458\u6DFB\u52A0\u4F60\u7684ID(${id})\u5230\u767D\u540D\u5355`,
-    "group_has_no_permission_to_use_the_bot": (id) => `\u8BE5\u7FA4\u672A\u5F00\u542F\u804A\u5929\u6743\u9650, \u8BF7\u8BF7\u8054\u7CFB\u7BA1\u7406\u5458\u6DFB\u52A0\u7FA4ID(${id})\u5230\u767D\u540D\u5355`
-  },
-  command: {
-    help: {
-      "summary": "\u5F53\u524D\u652F\u6301\u4EE5\u4E0B\u547D\u4EE4:\n",
-      "help": "\u83B7\u53D6\u547D\u4EE4\u5E2E\u52A9",
-      "new": "\u53D1\u8D77\u65B0\u7684\u5BF9\u8BDD",
-      "start": "\u83B7\u53D6\u4F60\u7684ID, \u5E76\u53D1\u8D77\u65B0\u7684\u5BF9\u8BDD",
-      "img": "\u751F\u6210\u4E00\u5F20\u56FE\u7247, \u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A `/img \u56FE\u7247\u63CF\u8FF0`, \u4F8B\u5982`/img \u6708\u5149\u4E0B\u7684\u6C99\u6EE9`",
-      "version": "\u83B7\u53D6\u5F53\u524D\u7248\u672C\u53F7, \u5224\u65AD\u662F\u5426\u9700\u8981\u66F4\u65B0",
-      "setenv": "\u8BBE\u7F6E\u7528\u6237\u914D\u7F6E\uFF0C\u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A /setenv KEY=VALUE",
-      "delenv": "\u5220\u9664\u7528\u6237\u914D\u7F6E\uFF0C\u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A /delenv KEY",
-      "clearenv": "\u6E05\u9664\u6240\u6709\u7528\u6237\u914D\u7F6E",
-      "usage": "\u83B7\u53D6\u5F53\u524D\u673A\u5668\u4EBA\u7684\u7528\u91CF\u7EDF\u8BA1",
-      "system": "\u67E5\u770B\u5F53\u524D\u4E00\u4E9B\u7CFB\u7EDF\u4FE1\u606F",
-      "role": "\u8BBE\u7F6E\u9884\u8BBE\u7684\u8EAB\u4EFD",
-      "redo": "\u91CD\u505A\u4E0A\u4E00\u6B21\u7684\u5BF9\u8BDD, /redo \u52A0\u4FEE\u6539\u8FC7\u7684\u5185\u5BB9 \u6216\u8005 \u76F4\u63A5 /redo",
-      "echo": "\u56DE\u663E\u6D88\u606F",
-      "bill": "\u67E5\u770B\u5F53\u524D\u8D26\u5355"
-    },
-    role: {
-      "not_defined_any_role": "\u8FD8\u672A\u5B9A\u4E49\u4EFB\u4F55\u89D2\u8272",
-      "current_defined_role": (size) => `\u5F53\u524D\u5DF2\u5B9A\u4E49\u7684\u89D2\u8272\u5982\u4E0B(${size}):
-`,
-      "help": "\u683C\u5F0F\u9519\u8BEF: \u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A `/role \u64CD\u4F5C`\n\u5F53\u524D\u652F\u6301\u4EE5\u4E0B`\u64CD\u4F5C`:\n `/role show` \u663E\u793A\u5F53\u524D\u5B9A\u4E49\u7684\u89D2\u8272.\n `/role \u89D2\u8272\u540D del` \u5220\u9664\u6307\u5B9A\u540D\u79F0\u7684\u89D2\u8272.\n `/role \u89D2\u8272\u540D KEY=VALUE` \u8BBE\u7F6E\u6307\u5B9A\u89D2\u8272\u7684\u914D\u7F6E.\n  \u76EE\u524D\u4EE5\u4E0B\u8BBE\u7F6E\u9879:\n   `SYSTEM_INIT_MESSAGE`:\u521D\u59CB\u5316\u6D88\u606F\n   `OPENAI_API_EXTRA_PARAMS`:OpenAI API \u989D\u5916\u53C2\u6570\uFF0C\u5FC5\u987B\u4E3AJSON",
-      "delete_role_success": "\u5220\u9664\u89D2\u8272\u6210\u529F",
-      "delete_role_error": (e) => `\u5220\u9664\u89D2\u8272\u9519\u8BEF: \`${e.message}\``,
-      "update_role_success": "\u66F4\u65B0\u914D\u7F6E\u6210\u529F",
-      "update_role_error": (e) => `\u914D\u7F6E\u9879\u683C\u5F0F\u9519\u8BEF: \`${e.message}\``
-    },
-    img: {
-      "help": "\u8BF7\u8F93\u5165\u56FE\u7247\u63CF\u8FF0\u3002\u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A `/img \u72F8\u82B1\u732B`"
-    },
-    new: {
-      "new_chat_start": "\u65B0\u7684\u5BF9\u8BDD\u5DF2\u7ECF\u5F00\u59CB",
-      "new_chat_start_private": (id) => `\u65B0\u7684\u5BF9\u8BDD\u5DF2\u7ECF\u5F00\u59CB\uFF0C\u4F60\u7684ID(${id})`,
-      "new_chat_start_group": (id) => `\u65B0\u7684\u5BF9\u8BDD\u5DF2\u7ECF\u5F00\u59CB\uFF0C\u7FA4\u7EC4ID(${id})`
-    },
-    setenv: {
-      "help": "\u914D\u7F6E\u9879\u683C\u5F0F\u9519\u8BEF: \u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A /setenv KEY=VALUE",
-      "update_config_success": "\u66F4\u65B0\u914D\u7F6E\u6210\u529F",
-      "update_config_error": (e) => `\u914D\u7F6E\u9879\u683C\u5F0F\u9519\u8BEF: ${e.message}`
-    },
-    version: {
-      "new_version_found": (current, online) => `\u53D1\u73B0\u65B0\u7248\u672C\uFF0C\u5F53\u524D\u7248\u672C: ${JSON.stringify(current)}\uFF0C\u6700\u65B0\u7248\u672C: ${JSON.stringify(online)}`,
-      "current_is_latest_version": (current) => `\u5F53\u524D\u5DF2\u7ECF\u662F\u6700\u65B0\u7248\u672C, \u5F53\u524D\u7248\u672C: ${JSON.stringify(current)}`
-    },
-    usage: {
-      "usage_not_open": "\u5F53\u524D\u673A\u5668\u4EBA\u672A\u5F00\u542F\u7528\u91CF\u7EDF\u8BA1",
-      "current_usage": "\u{1F4CA} \u5F53\u524D\u673A\u5668\u4EBA\u7528\u91CF\n\nTokens:\n",
-      "total_usage": (total) => `- \u603B\u7528\u91CF\uFF1A${total || 0} tokens
-- \u5404\u804A\u5929\u7528\u91CF\uFF1A`,
-      "no_usage": "- \u6682\u65E0\u7528\u91CF"
-    },
-    permission: {
-      "not_authorized": "\u8EAB\u4EFD\u6743\u9650\u9A8C\u8BC1\u5931\u8D25",
-      "not_enough_permission": (roleList, chatRole) => `\u6743\u9650\u4E0D\u8DB3,\u9700\u8981${roleList.join(",")},\u5F53\u524D:${chatRole}`,
-      "role_error": (e) => `\u8EAB\u4EFD\u9A8C\u8BC1\u51FA\u9519:` + e.message,
-      "command_error": (e) => `\u547D\u4EE4\u6267\u884C\u9519\u8BEF: ${e.message}`
-    },
-    bill: {
-      "bill_detail": (totalAmount, totalUsage, remaining) => `\u{1F4CA} \u672C\u6708\u673A\u5668\u4EBA\u7528\u91CF
-
-	- \u603B\u989D\u5EA6: $${totalAmount || 0}
-	- \u5DF2\u4F7F\u7528: $${totalUsage || 0}
-	- \u5269\u4F59\u989D\u5EA6: $${remaining || 0}`
-    }
-  }
-};
+var zh_hans_default = { "env": { "system_init_message": "\u4F60\u662F\u4E00\u4E2A\u5F97\u529B\u7684\u52A9\u624B" }, "command": { "help": { "summary": "\u5F53\u524D\u652F\u6301\u4EE5\u4E0B\u547D\u4EE4:\n", "help": "\u83B7\u53D6\u547D\u4EE4\u5E2E\u52A9", "new": "\u53D1\u8D77\u65B0\u7684\u5BF9\u8BDD", "start": "\u83B7\u53D6\u4F60\u7684ID, \u5E76\u53D1\u8D77\u65B0\u7684\u5BF9\u8BDD", "img": "\u751F\u6210\u4E00\u5F20\u56FE\u7247, \u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A `/img \u56FE\u7247\u63CF\u8FF0`, \u4F8B\u5982`/img \u6708\u5149\u4E0B\u7684\u6C99\u6EE9`", "version": "\u83B7\u53D6\u5F53\u524D\u7248\u672C\u53F7, \u5224\u65AD\u662F\u5426\u9700\u8981\u66F4\u65B0", "setenv": "\u8BBE\u7F6E\u7528\u6237\u914D\u7F6E\uFF0C\u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A /setenv KEY=VALUE", "setenvs": '\u6279\u91CF\u8BBE\u7F6E\u7528\u6237\u914D\u7F6E, \u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A /setenvs {"KEY1": "VALUE1", "KEY2": "VALUE2"}', "delenv": "\u5220\u9664\u7528\u6237\u914D\u7F6E\uFF0C\u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u4E3A /delenv KEY", "clearenv": "\u6E05\u9664\u6240\u6709\u7528\u6237\u914D\u7F6E", "system": "\u67E5\u770B\u5F53\u524D\u4E00\u4E9B\u7CFB\u7EDF\u4FE1\u606F", "redo": "\u91CD\u505A\u4E0A\u4E00\u6B21\u7684\u5BF9\u8BDD, /redo \u52A0\u4FEE\u6539\u8FC7\u7684\u5185\u5BB9 \u6216\u8005 \u76F4\u63A5 /redo", "echo": "\u56DE\u663E\u6D88\u606F" }, "new": { "new_chat_start": "\u65B0\u7684\u5BF9\u8BDD\u5DF2\u7ECF\u5F00\u59CB" } } };
 
 // src/i18n/zh-hant.js
-var zh_hant_default = {
-  env: {
-    "system_init_message": "\u4F60\u662F\u4E00\u500B\u5F97\u529B\u7684\u52A9\u624B"
-  },
-  utils: {
-    "not_supported_configuration": "\u4E0D\u652F\u6301\u7684\u914D\u7F6E\u6216\u6578\u64DA\u985E\u578B\u932F\u8AA4"
-  },
-  message: {
-    "loading": "\u52A0\u8F7D\u4E2D",
-    "not_supported_chat_type": (type) => `\u7576\u524D\u4E0D\u652F\u6301${type}\u985E\u578B\u7684\u804A\u5929`,
-    "not_supported_chat_type_message": "\u7576\u524D\u4E0D\u652F\u6301\u975E\u6587\u672C\u683C\u5F0F\u6D88\u606F",
-    "handle_chat_type_message_error": (type) => `\u8655\u7406${type}\u985E\u578B\u7684\u804A\u5929\u6D88\u606F\u51FA\u932F`,
-    "user_has_no_permission_to_use_the_bot": (id) => `\u60A8\u6C92\u6709\u6B0A\u9650\u4F7F\u7528\u672C\u6A5F\u5668\u4EBA\uFF0C\u8ACB\u806F\u7E6B\u7BA1\u7406\u54E1\u5C07\u60A8\u7684ID(${id})\u6DFB\u52A0\u5230\u767D\u540D\u55AE\u4E2D`,
-    "group_has_no_permission_to_use_the_bot": (id) => `\u8A72\u7FA4\u7D44\u672A\u958B\u555F\u804A\u5929\u6B0A\u9650\uFF0C\u8ACB\u806F\u7E6B\u7BA1\u7406\u54E1\u5C07\u8A72\u7FA4\u7D44ID(${id})\u6DFB\u52A0\u5230\u767D\u540D\u55AE\u4E2D`
-  },
-  command: {
-    help: {
-      "summary": "\u7576\u524D\u652F\u6301\u7684\u547D\u4EE4\u5982\u4E0B\uFF1A\n",
-      "help": "\u7372\u53D6\u547D\u4EE4\u5E6B\u52A9",
-      "new": "\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71",
-      "start": "\u7372\u53D6\u60A8\u7684ID\u4E26\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71",
-      "img": "\u751F\u6210\u5716\u7247\uFF0C\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA`/img \u5716\u7247\u63CF\u8FF0`\uFF0C\u4F8B\u5982`/img \u6D77\u7058\u6708\u5149`",
-      "version": "\u7372\u53D6\u7576\u524D\u7248\u672C\u865F\u78BA\u8A8D\u662F\u5426\u9700\u8981\u66F4\u65B0",
-      "setenv": "\u8A2D\u7F6E\u7528\u6236\u914D\u7F6E\uFF0C\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA/setenv KEY=VALUE",
-      "delenv": "\u522A\u9664\u7528\u6236\u914D\u7F6E\uFF0C\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA/delenv KEY",
-      "clearenv": "\u6E05\u9664\u6240\u6709\u7528\u6236\u914D\u7F6E",
-      "usage": "\u7372\u53D6\u6A5F\u5668\u4EBA\u7576\u524D\u7684\u4F7F\u7528\u60C5\u6CC1\u7D71\u8A08",
-      "system": "\u67E5\u770B\u4E00\u4E9B\u7CFB\u7D71\u4FE1\u606F",
-      "role": "\u8A2D\u7F6E\u9810\u8A2D\u8EAB\u4EFD",
-      "redo": "\u91CD\u505A\u4E0A\u4E00\u6B21\u7684\u5C0D\u8A71 /redo \u52A0\u4FEE\u6539\u904E\u7684\u5167\u5BB9 \u6216\u8005 \u76F4\u63A5 /redo",
-      "echo": "\u56DE\u663E\u6D88\u606F",
-      "bill": "\u67E5\u770B\u7576\u524D\u7684\u8CEC\u55AE"
-    },
-    role: {
-      "not_defined_any_role": "\u5C1A\u672A\u5B9A\u7FA9\u4EFB\u4F55\u89D2\u8272",
-      "current_defined_role": (size) => `\u7576\u524D\u5DF2\u5B9A\u7FA9\u7684\u89D2\u8272\u5982\u4E0B(${size})\uFF1A
-`,
-      "help": "\u683C\u5F0F\u932F\u8AA4\uFF1A\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA`/role \u64CD\u4F5C`\n\u7576\u524D\u652F\u6301\u7684`\u64CD\u4F5C`\u5982\u4E0B\uFF1A\n `/role show` \u67E5\u770B\u7576\u524D\u5DF2\u5B9A\u7FA9\u7684\u89D2\u8272\u3002\n `/role \u89D2\u8272\u540D del` \u522A\u9664\u6307\u5B9A\u7684\u89D2\u8272\u3002\n `/role \u89D2\u8272\u540D KEY=VALUE` \u8A2D\u7F6E\u6307\u5B9A\u89D2\u8272\u7684\u914D\u7F6E\u3002\n  \u7576\u524D\u652F\u6301\u7684\u8A2D\u7F6E\u5982\u4E0B\uFF1A\n   `SYSTEM_INIT_MESSAGE`\uFF1A\u521D\u59CB\u5316\u6D88\u606F\n   `OPENAI_API_EXTRA_PARAMS`\uFF1AOpenAI API\u984D\u5916\u53C3\u6578\uFF0C\u5FC5\u9808\u70BAJSON",
-      "delete_role_success": "\u522A\u9664\u89D2\u8272\u6210\u529F",
-      "delete_role_error": (e) => `\u522A\u9664\u89D2\u8272\u51FA\u932F\uFF1A\`${e.message}\``,
-      "update_role_success": "\u66F4\u65B0\u914D\u7F6E\u6210\u529F",
-      "update_role_error": (e) => `\u914D\u7F6E\u9805\u683C\u5F0F\u932F\u8AA4\uFF1A\`${e.message}\``
-    },
-    img: {
-      "help": "\u8ACB\u8F38\u5165\u5716\u7247\u63CF\u8FF0\u3002\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA`/img raccoon cat`"
-    },
-    new: {
-      "new_chat_start": "\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71",
-      "new_chat_start_private": (id) => `\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71\uFF0C\u60A8\u7684ID(${id})`,
-      "new_chat_start_group": (id) => `\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71\uFF0C\u7FA4\u7D44ID(${id})`
-    },
-    setenv: {
-      "help": "\u914D\u7F6E\u9805\u683C\u5F0F\u932F\u8AA4\uFF1A\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA/setenv KEY=VALUE",
-      "update_config_success": "\u66F4\u65B0\u914D\u7F6E\u6210\u529F",
-      "update_config_error": (e) => `\u914D\u7F6E\u9805\u683C\u5F0F\u932F\u8AA4\uFF1A\`${e.message}\``
-    },
-    version: {
-      "new_version_found": (current, online) => `\u767C\u73FE\u65B0\u7248\u672C\uFF0C\u7576\u524D\u7248\u672C\uFF1A${JSON.stringify(current)}\uFF0C\u6700\u65B0\u7248\u672C\uFF1A${JSON.stringify(online)}`,
-      "current_is_latest_version": (current) => `\u7576\u524D\u5DF2\u662F\u6700\u65B0\u7248\u672C\uFF0C\u7576\u524D\u7248\u672C\uFF1A${JSON.stringify(current)}`
-    },
-    usage: {
-      "usage_not_open": "\u7576\u524D\u6A5F\u5668\u4EBA\u672A\u958B\u555F\u4F7F\u7528\u60C5\u6CC1\u7D71\u8A08",
-      "current_usage": "\u{1F4CA} \u7576\u524D\u6A5F\u5668\u4EBA\u4F7F\u7528\u60C5\u6CC1\n\n\u4F7F\u7528\u60C5\u6CC1\uFF1A\n",
-      "total_usage": (total) => `- \u7E3D\u8A08\uFF1A${total || 0} \u6B21
-- \u6BCF\u500B\u7FA4\u7D44\u4F7F\u7528\u60C5\u6CC1\uFF1A `,
-      "no_usage": "- \u66AB\u7121\u4F7F\u7528\u60C5\u6CC1"
-    },
-    permission: {
-      "not_authorized": "\u8EAB\u4EFD\u6B0A\u9650\u9A57\u8B49\u5931\u6557",
-      "not_enough_permission": (roleList, chatRole) => `\u6B0A\u9650\u4E0D\u8DB3\uFF0C\u9700\u8981${roleList.join(",")}\uFF0C\u7576\u524D\uFF1A${chatRole}`,
-      "role_error": (e) => `\u8EAB\u4EFD\u9A57\u8B49\u51FA\u932F\uFF1A` + e.message,
-      "command_error": (e) => `\u547D\u4EE4\u57F7\u884C\u51FA\u932F\uFF1A${e.message}`
-    },
-    bill: {
-      "bill_detail": (totalAmount, totalUsage, remaining) => `\u{1F4CA} \u672C\u6708\u673A\u5668\u4EBA\u7528\u91CF
+var zh_hant_default = { "env": { "system_init_message": "\u4F60\u662F\u4E00\u500B\u5F97\u529B\u7684\u52A9\u624B" }, "command": { "help": { "summary": "\u7576\u524D\u652F\u6301\u7684\u547D\u4EE4\u5982\u4E0B\uFF1A\n", "help": "\u7372\u53D6\u547D\u4EE4\u5E6B\u52A9", "new": "\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71", "start": "\u7372\u53D6\u60A8\u7684ID\u4E26\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71", "img": "\u751F\u6210\u5716\u7247\uFF0C\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA`/img \u5716\u7247\u63CF\u8FF0`\uFF0C\u4F8B\u5982`/img \u6D77\u7058\u6708\u5149`", "version": "\u7372\u53D6\u7576\u524D\u7248\u672C\u865F\u78BA\u8A8D\u662F\u5426\u9700\u8981\u66F4\u65B0", "setenv": "\u8A2D\u7F6E\u7528\u6236\u914D\u7F6E\uFF0C\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA/setenv KEY=VALUE", "setenvs": '\u6279\u91CF\u8A2D\u7F6E\u7528\u6237\u914D\u7F6E, \u547D\u4EE4\u5B8C\u6574\u683C\u5F0F\u70BA /setenvs {"KEY1": "VALUE1", "KEY2": "VALUE2"}', "delenv": "\u522A\u9664\u7528\u6236\u914D\u7F6E\uFF0C\u5B8C\u6574\u547D\u4EE4\u683C\u5F0F\u70BA/delenv KEY", "clearenv": "\u6E05\u9664\u6240\u6709\u7528\u6236\u914D\u7F6E", "system": "\u67E5\u770B\u4E00\u4E9B\u7CFB\u7D71\u4FE1\u606F", "redo": "\u91CD\u505A\u4E0A\u4E00\u6B21\u7684\u5C0D\u8A71 /redo \u52A0\u4FEE\u6539\u904E\u7684\u5167\u5BB9 \u6216\u8005 \u76F4\u63A5 /redo", "echo": "\u56DE\u663E\u6D88\u606F" }, "new": { "new_chat_start": "\u958B\u59CB\u4E00\u500B\u65B0\u5C0D\u8A71" } } };
 
-	- \u603B\u989D\u5EA6: $${totalAmount || 0}
-	- \u5DF2\u4F7F\u7528: $${totalUsage || 0}
-	- \u5269\u4F59\u989D\u5EA6: $${remaining || 0}`
-    }
-  }
-};
+// src/i18n/pt.js
+var pt_default = { "env": { "system_init_message": "Voc\xEA \xE9 um assistente \xFAtil" }, "command": { "help": { "summary": "Os seguintes comandos s\xE3o suportados atualmente:\n", "help": "Obter ajuda sobre comandos", "new": "Iniciar uma nova conversa", "start": "Obter seu ID e iniciar uma nova conversa", "img": "Gerar uma imagem, o formato completo do comando \xE9 `/img descri\xE7\xE3o da imagem`, por exemplo `/img praia ao luar`", "version": "Obter o n\xFAmero da vers\xE3o atual para determinar se \xE9 necess\xE1rio atualizar", "setenv": "Definir configura\xE7\xE3o do usu\xE1rio, o formato completo do comando \xE9 /setenv CHAVE=VALOR", "setenvs": 'Definir configura\xE7\xF5es do usu\xE1rio em lote, o formato completo do comando \xE9 /setenvs {"CHAVE1": "VALOR1", "CHAVE2": "VALOR2"}', "delenv": "Excluir configura\xE7\xE3o do usu\xE1rio, o formato completo do comando \xE9 /delenv CHAVE", "clearenv": "Limpar todas as configura\xE7\xF5es do usu\xE1rio", "system": "Ver algumas informa\xE7\xF5es do sistema", "redo": "Refazer a \xFAltima conversa, /redo com conte\xFAdo modificado ou diretamente /redo", "echo": "Repetir a mensagem" }, "new": { "new_chat_start": "Uma nova conversa foi iniciada" } } };
 
 // src/i18n/en.js
-var en_default = {
-  env: {
-    "system_init_message": "You are a helpful assistant"
-  },
-  utils: {
-    "not_supported_configuration": "Not supported configuration or data type error"
-  },
-  message: {
-    "loading": "Loading",
-    "not_supported_chat_type": (type) => `Currently not supported ${type} type of chat`,
-    "not_supported_chat_type_message": "Currently not supported non-text format messages",
-    "handle_chat_type_message_error": (type) => `Error handling ${type} type of chat messages`,
-    "user_has_no_permission_to_use_the_bot": (id) => `You do not have permission to use this bot, please contact the administrator to add your ID (${id}) to the whitelist`,
-    "group_has_no_permission_to_use_the_bot": (id) => `The group has not enabled chat permissions, please contact the administrator to add the group ID (${id}) to the whitelist`
-  },
-  command: {
-    help: {
-      "summary": "The following commands are currently supported:\n",
-      "help": "Get command help",
-      "new": "Start a new conversation",
-      "start": "Get your ID and start a new conversation",
-      "img": "Generate an image, the complete command format is `/img image description`, for example `/img beach at moonlight`",
-      "version": "Get the current version number to determine whether to update",
-      "setenv": "Set user configuration, the complete command format is /setenv KEY=VALUE",
-      "delenv": "Delete user configuration, the complete command format is /delenv KEY",
-      "clearenv": "Clear all user configuration",
-      "usage": "Get the current usage statistics of the robot",
-      "system": "View some system information",
-      "role": "Set the preset identity",
-      "redo": "Redo the last conversation, /redo with modified content or directly /redo",
-      "echo": "Echo the message",
-      "bill": "View current bill"
-    },
-    role: {
-      "not_defined_any_role": "No roles have been defined yet",
-      "current_defined_role": (size) => `The following roles are currently defined (${size}):
-`,
-      "help": "Format error: the complete command format is `/role operation`\nThe following `operation` is currently supported:\n `/role show` Display the currently defined roles.\n `/role role name del` Delete the specified role.\n `/role role name KEY=VALUE` Set the configuration of the specified role.\n  The following settings are currently supported:\n   `SYSTEM_INIT_MESSAGE`: Initialization message\n   `OPENAI_API_EXTRA_PARAMS`: OpenAI API extra parameters, must be JSON",
-      "delete_role_success": "Delete role successfully",
-      "delete_role_error": (e) => `Delete role error: \`${e.message}\``,
-      "update_role_success": "Update configuration successfully",
-      "update_role_error": (e) => `Configuration item format error: \`${e.message}\``
-    },
-    img: {
-      "help": "Please enter the image description. The complete command format is `/img raccoon cat`"
-    },
-    new: {
-      "new_chat_start": "A new conversation has started",
-      "new_chat_start_private": (id) => `A new conversation has started, your ID (${id})`,
-      "new_chat_start_group": (id) => `A new conversation has started, group ID (${id})`
-    },
-    setenv: {
-      "help": "Configuration item format error: the complete command format is /setenv KEY=VALUE",
-      "update_config_success": "Update configuration successfully",
-      "update_config_error": (e) => `Configuration item format error: ${e.message}`
-    },
-    version: {
-      "new_version_found": (current, online) => `New version found, current version: ${JSON.stringify(current)}, latest version: ${JSON.stringify(online)}`,
-      "current_is_latest_version": (current) => `Current is the latest version, current version: ${JSON.stringify(current)}`
-    },
-    usage: {
-      "usage_not_open": "The current robot is not open for usage statistics",
-      "current_usage": "\u{1F4CA} Current robot usage\n\nTokens:\n",
-      "total_usage": (total) => `- Total: ${total || 0} tokens
-- Per chat usage: `,
-      "no_usage": "- No usage"
-    },
-    permission: {
-      "not_authorized": "Identity permission verification failed",
-      "not_enough_permission": (roleList, chatRole) => `Insufficient permissions, need ${roleList.join(",")}, current: ${chatRole}`,
-      "role_error": (e) => `Identity verification error: ` + e.message,
-      "command_error": (e) => `Command execution error: ${e.message}`
-    },
-    bill: {
-      "bill_detail": (totalAmount, totalUsage, remaining) => `\u{1F4CA} This month usage
-
-	- Amount: $${totalAmount || 0}
-	- Usage: $${totalUsage || 0}
-	- Remaining: $${remaining || 0}`
-    }
-  }
-};
+var en_default = { "env": { "system_init_message": "You are a helpful assistant" }, "command": { "help": { "summary": "The following commands are currently supported:\n", "help": "Get command help", "new": "Start a new conversation", "start": "Get your ID and start a new conversation", "img": "Generate an image, the complete command format is `/img image description`, for example `/img beach at moonlight`", "version": "Get the current version number to determine whether to update", "setenv": "Set user configuration, the complete command format is /setenv KEY=VALUE", "setenvs": 'Batch set user configurations, the full format of the command is /setenvs {"KEY1": "VALUE1", "KEY2": "VALUE2"}', "delenv": "Delete user configuration, the complete command format is /delenv KEY", "clearenv": "Clear all user configuration", "system": "View some system information", "redo": "Redo the last conversation, /redo with modified content or directly /redo", "echo": "Echo the message" }, "new": { "new_chat_start": "A new conversation has started" } } };
 
 // src/i18n/index.js
 function i18n(lang) {
@@ -2777,8 +2660,13 @@ function i18n(lang) {
     case "zh-mo":
     case "zh-hant":
       return zh_hant_default;
+    case "pt":
+    case "pt-br":
+      return pt_default;
     case "en":
     case "en-us":
+      return en_default;
+    default:
       return en_default;
   }
 }
