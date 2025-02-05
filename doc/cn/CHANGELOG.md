@@ -1,9 +1,22 @@
 # 更新日志
 
+- v1.10.6
+  - 添加`DeepSeek` 和 `Gorq`独立Agent支持
+
+- v1.10.5
+  - 添加`Telegram MarkdownV2`完整支持
+
+- v1.10.0
+  - 使用 InlineKeyboards 切换模型
+
+- v1.9.0
+  - 添加插件系统
+
 - v1.8.0
   - 支持Cohere,Anthropic Ai
+  - 支持图片输入
   - 适配群组话题模式
-  - 删除部分废弃功能模块
+  - 移除role功能,使用自定义指令代替
   - 修复超长文本发送失败BUG
 
 - v1.7.0

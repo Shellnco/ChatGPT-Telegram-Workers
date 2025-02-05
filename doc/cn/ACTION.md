@@ -1,10 +1,11 @@
 # Github Action 自动更新流程
 
+> PS: Cloudflare Workers 已经支持自动构建, 详情见[文档](https://developers.cloudflare.com/workers/ci-cd/builds/)
+
 ## 1. 手动完成一次部署
 具体部署流程看[部署流程](DEPLOY.md)
 
 ## 2. Fork 本仓库
-
 
 ## 3. 创建Cloudflare API TOKEN
 要创建一个具有 Workers 权限的 Cloudflare API Token，请按照以下步骤操作：
@@ -12,13 +13,12 @@
 1. 登录 Cloudflare 帐户并导航到“我的资料”页面。
 2. 在左侧菜单中选择“API Tokens”。
 3. 点击“Create Token”按钮。
-4. 在 API token templates 中选择 Edit Cloudflare Workers
-<img style="max-width: 600px;" alt="image" src="https://user-images.githubusercontent.com/9513891/223635764-54bf4418-3571-49e4-8c41-a4d331f3d791.png">
+4. 在 API token templates 中选择 Edit Cloudflare Workers <br><img style="max-width: 600px;" alt="image" src="https://user-images.githubusercontent.com/9513891/223635764-54bf4418-3571-49e4-8c41-a4d331f3d791.png">
 5. 在“Zone Resources”下拉菜单中，选择要授权的区域。
-6. 在“Account Resources”下拉菜单中，选择要授权的帐户。
-<img style="max-width: 600px;" alt="image" src="https://user-images.githubusercontent.com/9513891/223635869-aabb8ca6-7933-4f48-920f-6579d29947a8.png">
+6. 在“Account Resources”下拉菜单中，选择要授权的帐户。 <br><img style="max-width: 600px;" alt="image" src="https://user-images.githubusercontent.com/9513891/223635869-aabb8ca6-7933-4f48-920f-6579d29947a8.png">
 7. 点击“Create Token”按钮。
 > 现在您已创建一个具有 Workers 权限的 Cloudflare API Token。请记住，API Token 的安全性非常重要，请不要在不必要的情况下共享它，并定期更改 API Token。
+
 
 ## 4. 设置 Action 的 Secrets
 <img style="max-width: 600px;" alt="image" src="https://user-images.githubusercontent.com/9513891/223635458-cd4dd1ef-6ff6-4b49-bcf5-f1224d6b62af.png">
@@ -50,7 +50,7 @@
           uses: repo-sync/github-sync@v2
           with:
             source_repo: 'https://github.com/TBXark/ChatGPT-Telegram-Workers'
-            target_repo: '填写你的仓库地址'
+            target_repo: 'https://github.com/YOUR_NAME/ChatGPT-Telegram-Workers'
             github_token: ${{ secrets.GITHUB_TOKEN }} 
             source_branch: 'master'
-  ```
+   ```
