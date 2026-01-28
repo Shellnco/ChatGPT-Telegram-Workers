@@ -6,22 +6,22 @@
     "types": "./dist/index.d.ts",
     "scripts": {
         "build": "pnpm vite build",
-        "clean": "rm -rf dist && rm -rf node_modules"
+        "clean": "rm -rf dist && rm -rf node_modules && rm -rf tsconfig.tsbuildinfo"
     },
     "dependencies": {
-        "@ai-sdk/anthropic": "^1.0.8",
-        "@ai-sdk/azure": "^1.0.21",
-        "@ai-sdk/cohere": "^1.0.8",
-        "@ai-sdk/google": "^1.0.16",
-        "@ai-sdk/mistral": "^1.0.8",
-        "@ai-sdk/openai": "^1.0.19",
-        "@ai-sdk/provider": "^1.0.4",
+        "@ai-sdk/anthropic": "^2.0.35",
+        "@ai-sdk/azure": "^2.0.54",
+        "@ai-sdk/cohere": "^2.0.14",
+        "@ai-sdk/google": "^2.0.23",
+        "@ai-sdk/mistral": "^2.0.19",
+        "@ai-sdk/openai": "^2.0.53",
+        "@ai-sdk/provider": "^2.0.0",
         "@chatgpt-telegram-workers/core": "workspace:*",
-        "ai": "^4.0.38"
+        "ai": "^5.0.76"
     },
     "devDependencies": {
-        "@types/react": "^19.0.7",
-        "openai": "^4.78.1",
-        "react-dom": "^19.0.0"
+        "@types/react": "^19.2.2",
+        "openai": "^6.6.0",
+        "react-dom": "^19.2.0"
     }
 }

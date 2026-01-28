@@ -1,7 +1,11 @@
 # 更新日志
 
+- v1.10.7
+  - 修复 `Groq` 名称拼写错误
+  - 添加 `Xai` 独立Agent支持
+  
 - v1.10.6
-  - 添加`DeepSeek` 和 `Gorq`独立Agent支持
+  - 添加`DeepSeek` 和 `Groq`独立Agent支持
 
 - v1.10.5
   - 添加`Telegram MarkdownV2`完整支持

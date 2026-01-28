@@ -27,7 +27,7 @@ You can customize the system initialization information so that your debugged pe
 
 - Serverless deployment
 - Multi-platform deployment support (Cloudflare Workers, Vercel, Docker[...](doc/en/PLATFORM.md))
-- Adaptation to multiple AI service providers (OpenAI, Azure OpenAI, Cloudflare AI, Cohere, Anthropic, Mistral, DeepSeek, Gemini, Gorq[...](doc/en/CONFIG.md))
+- Adaptation to multiple AI service providers (OpenAI, Azure OpenAI, Cloudflare AI, Cohere, Anthropic, Mistral, DeepSeek, Gemini, Groq[...](doc/en/CONFIG.md))
 - Switching Models with InlineKeyboards
 - Custom commands (can achieve quick switching of models, switching of robot presets)
 - Support for multiple Telegram bots
@@ -51,13 +51,6 @@ You can customize the system initialization information so that your debugged pe
 
 - [cloudflare-worker-adapter](https://github.com/TBXark/cloudflare-worker-adapter)  A simple Cloudflare Worker adapter that allows this project to run independently of Cloudflare Worker.
 - [telegram-bot-api-types](https://github.com/TBXark/telegram-bot-api-types)  Telegram Bot API SDK with 0 output after compilation, complete documentation, supports all APIs.
-
-
-## Special thanks
-
-![https://www.jetbrains.com/?from=tbxark](https://user-images.githubusercontent.com/9513891/236592683-1ea579cf-08ff-4703-b313-db038f62bab0.svg)
-
-Thanks for the open-source development license provided by [JetBrains](https://www.jetbrains.com/?from=tbxark).
 
 
 ## Contributors

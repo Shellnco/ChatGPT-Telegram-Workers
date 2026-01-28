@@ -34,7 +34,7 @@ export class AzureChatAI implements ChatAgent {
         const url = `https://${context.AZURE_RESOURCE_NAME}.openai.azure.com/openai/deployments/${context.AZURE_CHAT_MODEL}/chat/completions?api-version=${context.AZURE_API_VERSION}`;
         const header = azureHeader(context);
         const body = {
-            ...context.OPENAI_API_EXTRA_PARAMS,
+            ...(context.AZURE_CHAT_EXTRA_PARAMS || {}),
             messages: await renderOpenAIMessages(prompt, messages, [ImageSupportFormat.URL, ImageSupportFormat.BASE64]),
             stream: onStream != null,
         };
@@ -42,7 +42,7 @@ export class AzureChatAI implements ChatAgent {
     };
 
     readonly modelList = async (context: AgentUserConfig): Promise<string[]> => {
-        if (context.AZURE_CHAT_MODELS_LIST) {
+        if (context.AZURE_CHAT_MODELS_LIST === '') {
             context.AZURE_CHAT_MODELS_LIST = `https://${context.AZURE_RESOURCE_NAME}.openai.azure.com/openai/models?api-version=${context.AZURE_API_VERSION}`;
         }
         return loadModelsList(context.AZURE_CHAT_MODELS_LIST, async (url): Promise<string[]> => {

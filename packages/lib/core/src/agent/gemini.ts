@@ -14,13 +14,14 @@ import { getAgentUserConfigFieldName, loadModelsList } from './utils';
 
 export class Gemini implements ChatAgent {
     readonly name = 'gemini';
-    readonly modelKey = getAgentUserConfigFieldName('GOOGLE_COMPLETIONS_MODEL');
+    readonly modelKey = getAgentUserConfigFieldName('GOOGLE_CHAT_MODEL');
 
     readonly fieldGetter = agentConfigFieldGetter({
         base: 'GOOGLE_API_BASE',
         key: 'GOOGLE_API_KEY',
         model: 'GOOGLE_CHAT_MODEL',
         modelsList: 'GOOGLE_CHAT_MODELS_LIST',
+        extraParams: 'GOOGLE_CHAT_EXTRA_PARAMS',
     });
 
     readonly enable = createAgentEnable(this.fieldGetter);

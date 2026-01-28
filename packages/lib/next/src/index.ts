@@ -1,6 +1,6 @@
-import type { ProviderV1 } from '@ai-sdk/provider';
-import type { AgentUserConfig, ChatAgent, ChatAgentResponse, ChatStreamTextHandler, HistoryItem, LLMChatParams } from '@chatgpt-telegram-workers/core';
-import type { CoreMessage, LanguageModelV1 } from 'ai';
+import type { ProviderV2 } from '@ai-sdk/provider';
+import type { AgentUserConfig, ChatAgent, ChatAgentResponse, ChatStreamTextHandler, HistoryItem, LLMChatParams, ResponseMessage } from '@chatgpt-telegram-workers/core';
+import type { AssistantModelMessage, LanguageModel, ModelMessage, ToolModelMessage } from 'ai';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createAzure } from '@ai-sdk/azure';
 import { createCohere } from '@ai-sdk/cohere';
@@ -10,32 +10,43 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { streamHandler } from '@chatgpt-telegram-workers/core';
 import { generateText, streamText } from 'ai';
 
-export async function requestChatCompletionsV2(params: { model: LanguageModelV1; prompt?: string; messages: HistoryItem[] }, onStream: ChatStreamTextHandler | null): Promise<ChatAgentResponse> {
+function convertResponseToMessages(messages: (AssistantModelMessage | ToolModelMessage)[]): ResponseMessage[] {
+    return messages.map((message) => {
+        if (message.role && message.content) {
+            return {
+                role: message.role,
+                content: message.content,
+            } as ResponseMessage;
+        }
+        return null;
+    }).filter(message => message !== null) as ResponseMessage[];
+}
+
+export async function requestChatCompletionsV2(params: { model: LanguageModel; system?: string; messages: HistoryItem[] }, onStream: ChatStreamTextHandler | null): Promise<ChatAgentResponse> {
+    const messages = params.messages as Array<ModelMessage>;
+    const baseOptions = {
+        model: params.model,
+        messages,
+        ...(params.system ? { system: params.system } : {}),
+    };
+
     if (onStream !== null) {
-        const stream = streamText({
-            model: params.model,
-            prompt: params.prompt,
-            messages: params.messages as Array<CoreMessage>,
-        });
+        const stream = streamText(baseOptions);
         await streamHandler(stream.textStream, t => t, onStream);
         return {
             text: await stream.text,
-            responses: (await stream.response).messages,
+            responses: convertResponseToMessages((await stream.response).messages),
         };
     } else {
-        const result = await generateText({
-            model: params.model,
-            prompt: params.prompt,
-            messages: params.messages as Array<CoreMessage>,
-        });
+        const result = await generateText(baseOptions);
         return {
             text: result.text,
-            responses: result.response.messages,
+            responses: convertResponseToMessages(result.response.messages),
         };
     }
 }
 
-export type ProviderCreator = (context: AgentUserConfig) => ProviderV1;
+export type ProviderCreator = (context: AgentUserConfig) => ProviderV2;
 
 export class NextChatAgent implements ChatAgent {
     readonly name: string;
@@ -108,15 +119,10 @@ export class NextChatAgent implements ChatAgent {
         if (!model) {
             throw new Error('Model not found');
         }
-        if (params.prompt) {
-            params.messages.unshift({
-                role: 'system',
-                content: params.prompt,
-            });
-        }
         return requestChatCompletionsV2({
             model: this.providerCreator(context).languageModel(model),
             messages: params.messages,
+            system: params.prompt,
         }, onStream);
     };
 
